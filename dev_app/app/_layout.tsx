@@ -5,8 +5,16 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import '@react-native-firebase/app';
+import firestore from '@react-native-firebase/firestore';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+
+if (__DEV__) {
+  firestore().useEmulator('localhost', 8080);
+}
+
+const db = firestore();
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
