@@ -7,8 +7,19 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 import '@react-native-firebase/app';
 import firestore from '@react-native-firebase/firestore';
+import {getApp, initializeApp} from '@react-native-firebase/app';
+import firebase from '@react-native-firebase/app';
+import "../db_connect.js";
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import firebaseConnect from '../db_connect.js';
+
+let app;
+if (firebase.apps.length === 0) {
+  app = initializeApp(firebaseConnect);
+} else {
+  app = firebase.app()
+}
 
 if (__DEV__) {
   firestore().useEmulator('localhost', 8080);
