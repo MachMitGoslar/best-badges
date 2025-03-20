@@ -36,3 +36,12 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+# Firebase Emulators
+firebase.json
+.firebaserc
+firestore.indexes.json
+firestore.rules
+functions/
+
+*.log

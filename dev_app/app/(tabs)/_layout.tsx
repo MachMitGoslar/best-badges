@@ -44,7 +44,7 @@ export default function TabLayout() {
         name="impressum"
         options={{
           title: 'Impressum',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="text.document.fill" color={color} />,
         }}
       />
     </Tabs>
