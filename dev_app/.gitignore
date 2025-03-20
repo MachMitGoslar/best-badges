@@ -38,10 +38,10 @@ yarn-error.*
 app-example
 
 # Firebase Emulators
-firebase.json
+#firebase.json
 .firebaserc
-firestore.indexes.json
-firestore.rules
-functions/
+#firestore.indexes.json
+#firestore.rules
+#functions/
 
 *.log
