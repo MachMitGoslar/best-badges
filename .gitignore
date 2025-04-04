@@ -1,1 +1,5 @@
+db_connect.js
 db_connect.txt
+.DS_Store
+./dev_app/db_connect.js
+./dev_app/*.log
