@@ -1,31 +1,35 @@
-import '@react-native-firebase/app';
-import firestore from '@react-native-firebase/firestore';
-import fireauth from '@react-native-firebase/auth';
-import {getApp, initializeApp, ReactNativeFirebase} from '@react-native-firebase/app';
-import firebase from '@react-native-firebase/app';
+import firestore, { connectFirestoreEmulator, FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+import {FirebaseAuthTypes, getAuth, connectAuthEmulator} from '@react-native-firebase/auth';
+import {getApp, initializeApp, getApps, ReactNativeFirebase } from '@react-native-firebase/app';
 
 import { firebaseConfig }  from '../../db_connect.js';
 
-let app;
-if (firebase.apps.length === 0) {
-  app = initializeApp(firebaseConfig);
-} else {
-  app = firebase.app()
-
-}
-
-if (__DEV__) {
-  firestore().useEmulator('localhost', 8080);
-  //fireauth().useEmulator("127.0.0.1:9099");
-}
 
 
 class DBService {
-
-    public db = firestore()
-    //public auth = fireauth();
+    public app: ReactNativeFirebase.FirebaseApp;
+    public db: FirebaseFirestoreTypes.Module
+    public auth: FirebaseAuthTypes.Module;
 
     constructor() {
+      if (getApps().length === 0) {
+        this.app = initializeApp(firebaseConfig);
+      } else {
+        this.app = getApp()
+      
+      }
+      
+      this.db = firestore(this.app);
+      this.auth = getAuth(this.app);
+
+      if (__DEV__) {
+      
+       connectAuthEmulator(this.auth, "localhost:9099");
+       connectFirestoreEmulator(this.db, "localhost", 8080);
+        
+      }
+
+    
     }
 
     public saveToDB() {
