@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "725191844039",
+    "firebase_url": "https://best-badges-dev-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "best-badges-dev",
+    "storage_bucket": "best-badges-dev.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:725191844039:android:a5ba722ef7141183725ee2",
+        "android_client_info": {
+          "package_name": "de.goslar.machmit.badges"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAnk_UiuDAHIqNsJtVfgT0nuaf3k08fYyU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

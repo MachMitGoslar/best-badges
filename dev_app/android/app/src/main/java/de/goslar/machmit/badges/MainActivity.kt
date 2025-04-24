@@ -1,4 +1,4 @@
-package com.anonymous.best_badges
+package de.goslar.machmit.badges
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

@@ -1,4 +1,4 @@
-package com.anonymous.best_badges
+package de.goslar.machmit.badges
 
 import android.app.Application
 import android.content.res.Configuration

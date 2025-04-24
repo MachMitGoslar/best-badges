@@ -1,0 +1,8 @@
+19:10:05.158 [NamespaceSystem-akka.actor.default-dispatcher-4] INFO akka.event.slf4j.Slf4jLogger - Slf4jLogger started
+19:10:05.225 [main] INFO com.firebase.server.forge.App$ - Listening at 127.0.0.1:9000
+19:10:16.847 [NamespaceSystem-akka.actor.default-dispatcher-4] INFO com.firebase.core.namespace.NamespaceActor - best-badges-dev-default-rtdb successfully activated FBKV (SurveyIdle(0)) wait: 53ms, init: 0ms
+19:10:16.873 [NamespaceSystem-blocking-namespace-operation-dispatcher-6] INFO com.firebase.core.namespace.StateManager - Namespace best-badges-dev-default-rtdb status Active to Active
+19:10:18.796 [Thread-0] INFO com.firebase.server.forge.App$ - Attempting graceful shutdown.
+19:10:18.807 [NamespaceSystem-akka.actor.default-dispatcher-4] INFO com.firebase.core.namespace.Terminator$Terminator - 1 actors left to terminate: best-badges-dev-default-rtdb
+19:10:18.810 [NamespaceSystem-akka.actor.default-dispatcher-4] INFO com.firebase.core.namespace.NamespaceActor - stopped namespace actor for best-badges-dev-default-rtdb
+19:10:18.812 [Thread-0] INFO com.firebase.server.forge.App$ - Graceful shutdown complete.
