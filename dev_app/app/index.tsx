@@ -1,7 +1,6 @@
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "@react-native-firebase/auth";
 import { useRouter, Stack } from "expo-router";
 import { View } from "react-native";
-import { Text, Button } from "react-native";
 import { FirebaseAuthTypes } from "@react-native-firebase/auth";
 import { useEffect, useState } from "react";
 
@@ -16,7 +15,7 @@ const [ user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
         if (user) {
           setUser(user);
           console.log("Actual User: " + user.email);
-          router.replace("./(tabs)/welcome");
+          router.replace("./(tabs)/home");
         } else {
           console.log("No user is logged in.");
           setUser(null);

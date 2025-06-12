@@ -52,8 +52,9 @@ const [password, setPassword] = useState<string>('');
           <Text style={styles.forgotPassword}>Forgot Password?</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.button}
+          style={!email || !password ? styles.buttonDisbabled : styles.button}
           onPress={handleLogin}
+          disabled={!email || !password}
         >
           <Text style={styles.buttonText}>Login</Text>
         </TouchableOpacity>
@@ -112,6 +113,15 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 50,
     backgroundColor: '#1E90FF',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  buttonDisbabled: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#BEBEBE',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
