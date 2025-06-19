@@ -17,18 +17,21 @@ const items = [
     id: 1,
     title: 'Altstadtlauf 2025',
     granted: '04.05.2025',
-    description: 'Teilnahme am Altstadtlauf 2025. Gratulation!',
+    conditition: 'Nimm am Altstadtlauf 2025 teil.',
+    description: 'Du hast am Altstadtlauf 2025 teilgenommen. Gratulation!',
   },
   {
     id: 2,
     title: 'Tim\'s Kaffeejunkie',
     granted: '',
+    condition: 'Kaufe einen Kaffee bei Tim\'s Café.',
     description: 'Du hast einen Kaffe bei Tims\'s gekauft.'
   },
   {
     id: 3,
     title: 'Mit!Macher',
     granted: '',
+    condition: 'Informiere dich über das Mach!Mit-Haus.',
     description: 'Du hast dich beim Mach!Mit-Haus über das Angebot informiert.',
   },
 ];
@@ -45,7 +48,7 @@ export default function HomeScreen() {
         {items.map((item) => (
           <TouchableOpacity onPress={() => {
             console.log('Item pressed:', item.id)
-            router.push({ pathname: "/bagdeDetails", params: { id: item.id, title: item.title, granted: item.granted, description: item.description } });
+            router.push({ pathname: "/bagdeDetails", params: { id: item.id, title: item.title, granted: item.granted, condition: item.condition, description: item.description } });
           }} key={item.id} style={
             styles.singleItem
           }>

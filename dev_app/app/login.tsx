@@ -15,10 +15,12 @@ const [email, setEmail] = useState<string>('');
 const [password, setPassword] = useState<string>('');
 
   async function handleLogin() {
+    console.log("Login attempt with email: " + email);
     signInWithEmailAndPassword(auth, email, password).then((userCredential) => {
       const user = userCredential.user;
       console.log("User logged in: " + user.email);
     }).catch((error) => {
+      console.error("Login error: ", error);
       if (error.code ==='auth/invalid-credential') {
         Alert.alert("Invalid credentials", "Please check your email and password.");
       }
