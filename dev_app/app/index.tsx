@@ -15,6 +15,7 @@ const [ user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
         if (user) {
           setUser(user);
           console.log("Actual User: " + user.email);
+          console.log("User ID: " + user.uid);
           router.replace("./(tabs)/home");
         } else {
           console.log("No user is logged in.");

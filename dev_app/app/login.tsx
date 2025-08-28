@@ -6,19 +6,50 @@ import { FirebaseAuthTypes } from "@react-native-firebase/auth";
 import { useEffect, useState } from "react";
 import { Alert, StyleSheet, TextInput, TouchableOpacity } from "react-native";
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import firestore, { getFirestore, getDocs, setDoc, doc, collection, query, Timestamp, arrayUnion } from "@react-native-firebase/firestore";
+
 
 export default function LoginScreen() {
 const router = useRouter();
 const auth = getAuth();
+const db = getFirestore();
 const [ user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
 const [email, setEmail] = useState<string>('');
 const [password, setPassword] = useState<string>('');
+const badgeData: { id: string; condition: string; description: string; created: Timestamp }[] = [];
 
   async function handleLogin() {
     console.log("Login attempt with email: " + email);
     signInWithEmailAndPassword(auth, email, password).then((userCredential) => {
       const user = userCredential.user;
       console.log("User logged in: " + user.email);
+
+      // Update last login and initalize user data
+      setDoc(doc(db, 'users', user.uid), {
+        email: user.email,
+        lastLogin: new Date(),
+      });
+
+      getDocs(query(collection(db, 'badges'))).then((querySnapshot) => {
+        querySnapshot.forEach((document) => {
+          setDoc(doc(db, 'users', user.uid), {
+            badges: arrayUnion(
+              {
+                id: document.id,
+                condition: document.data().condition,
+                description: document.data().description,
+                created: document.data().created || Timestamp.now(),
+              }),
+          }, { merge: true });
+          badgeData.push({
+            id: document.id,
+            condition: document.data().condition,
+            description: document.data().description,
+            created: document.data().created || Timestamp.now(),
+          });
+          console.log(`${document.id} => ${document.data()}`);
+        });
+      })
     }).catch((error) => {
       console.error("Login error: ", error);
       if (error.code ==='auth/invalid-credential') {

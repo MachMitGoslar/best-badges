@@ -1,6 +1,7 @@
 import { useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
 import { StyleSheet, Image, Platform, View, Text, TouchableOpacity, SafeAreaView } from 'react-native';
+import { items } from '../../model/badge'; // Assuming you have a data file with badge items
 
 export default function Scan() {
   const [permission, requestPermission] = useCameraPermissions();

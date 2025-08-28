@@ -3,6 +3,8 @@ import { getAuth, signOut } from '@react-native-firebase/auth';
 import { useNavigation, useRouter } from 'expo-router';
 import { Dimensions } from 'react-native';
 import { Image } from 'expo-image';
+import { items } from '../../model/badge'; // Assuming you have a data file with badge items
+import { doc, getDoc} from 'firebase/firestore';
 
 const { width } = Dimensions.get('window');
 const windowWidth = width;
@@ -12,36 +14,11 @@ const totalGap = gap * (itemsPerRow);
 const itemWidth = (windowWidth - totalGap) / itemsPerRow;
 const itemHeight = itemWidth*1.1;
 
-const items = [
-  {
-    id: 1,
-    title: 'Altstadtlauf 2025',
-    granted: '04.05.2025',
-    conditition: 'Nimm am Altstadtlauf 2025 teil.',
-    description: 'Du hast am Altstadtlauf 2025 teilgenommen. Gratulation!',
-  },
-  {
-    id: 2,
-    title: 'Tim\'s Kaffeejunkie',
-    granted: '',
-    condition: 'Kaufe einen Kaffee bei Tim\'s Café.',
-    description: 'Du hast einen Kaffe bei Tims\'s gekauft.'
-  },
-  {
-    id: 3,
-    title: 'Mit!Macher',
-    granted: '',
-    condition: 'Informiere dich über das Mach!Mit-Haus.',
-    description: 'Du hast dich beim Mach!Mit-Haus über das Angebot informiert.',
-  },
-];
 
 export default function HomeScreen() {
   const auth = getAuth();
   const router = useRouter();
   
-  
-
   return (
     <SafeAreaView>
       <ScrollView contentContainerStyle= {{ flexDirection: 'row', flexWrap: 'wrap', height: '100%', width: '100%'}}>
