@@ -8,6 +8,7 @@ import { badge } from '../../model/badge'; // Assuming you have a data file with
 
 import firestore, { query } from '@react-native-firebase/firestore';
 import { useEffect, useState } from 'react';
+import { userBadge } from '@/model/userbadge';
 
 const { width } = Dimensions.get('window');
 const windowWidth = width;
@@ -24,7 +25,7 @@ export default function HomeScreen() {
   const firestore = getFirestore();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<Array<badge>>([]);
-  const [userItems, setUserItems] = useState<Array<Date>>([]);
+  const [userItems, setUserItems] = useState<Array<userBadge>>([]);
 
   // Auslesen Bagdes aus Firestore
   const badgesRef = collection(firestore, 'badges');
@@ -44,28 +45,52 @@ export default function HomeScreen() {
     });
 
     const userFetch = async () => userRef.onSnapshot(querySnapshot => {
-      let userDocs = [];
+      let userDocs: Array<userBadge> =  [];
       querySnapshot.forEach(doc => {
         console.log('User Badges: ' + doc.id);
         const granted: Timestamp = doc.data().granted;
-        console.log(granted.toDate());
-        userDocs.push(granted.toDate());
-        setUserItems(userDocs);
+        // const itemData = items.find(item => item.id === doc.id);
+        // if (itemData) {
+        //   const userBadgeItem = new userBadge(
+        //     itemData.id,
+        //     itemData.title,
+        //     granted.toDate().toString(),
+        //     itemData.condition,
+        //     itemData.description
+        //   );
+        //   userDocs.push(userBadgeItem);
+        // }
+        items.forEach(itemData => {
+          if (itemData.id === doc.id) {
+            const userBadgeItem = new userBadge(
+              itemData.id,
+              itemData.title,
+              granted.toDate().toString(),
+              itemData.condition,
+              itemData.description
+            );
+            console.log('User Badge Item:', userBadgeItem);
+            userDocs.push(userBadgeItem);
+          } else {
+            userDocs.push(itemData);
+            console.log('Item without user badge:', itemData);
+          }
+        });
       });
+      setUserItems(userDocs);
     });
 
     fetch().then(() => {
       userFetch();
-
       setLoading(false);
     });
-    console.log(items);
+    console.log(userItems);
   }, []);
 
   return (
     <SafeAreaView>
       <ScrollView contentContainerStyle= {{ flexDirection: 'row', flexWrap: 'wrap', height: '100%', width: '100%'}}>
-        {items.map((item) => (
+        {userItems.map((item) => (
           <TouchableOpacity onPress={() => {
             console.log('Item pressed:', item.id)
             router.push({ pathname: "/bagdeDetails", params: { id: item.id, title: item.title, granted: item.granted, condition: item.condition, description: item.description } });
