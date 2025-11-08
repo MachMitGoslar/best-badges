@@ -7,32 +7,20 @@ import { useEffect, useState } from "react";
 import { Alert, StyleSheet, TextInput, TouchableOpacity } from "react-native";
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import firestore, { getFirestore, getDocs, setDoc, doc, collection, query, Timestamp, arrayUnion } from "@react-native-firebase/firestore";
-
+import { useAuth } from '@/contexts/authContext';
 
 export default function LoginScreen() {
-const router = useRouter();
-const auth = getAuth();
 const db = getFirestore();
-const [ user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
+const { signInUser } = useAuth();
 const [email, setEmail] = useState<string>('');
 const [password, setPassword] = useState<string>('');
 const badgeData: { id: string; condition: string; description: string; created: Timestamp }[] = [];
 
   async function handleLogin() {
-    console.log("Login attempt with email: " + email);
-    signInWithEmailAndPassword(auth, email, password).then((userCredential) => {
-      const user = userCredential.user;
-      console.log("User logged in: " + user.email);
-
-      // Update last login and initalize user data
-      setDoc(doc(db, 'users', user.uid), {
-        email: user.email,
-        lastLogin: new Date(),
-      });
-
+      const userId = await signInUser(email, password);
       getDocs(query(collection(db, 'badges'))).then((querySnapshot) => {
         querySnapshot.forEach((document) => {
-          setDoc(doc(db, 'users', user.uid), {
+          setDoc(doc(db, 'users', userId), {
             badges: arrayUnion(
               {
                 id: document.id,
@@ -50,12 +38,7 @@ const badgeData: { id: string; condition: string; description: string; created: 
           console.log(`${document.id} => ${document.data()}`);
         });
       })
-    }).catch((error) => {
-      console.error("Login error: ", error);
-      if (error.code ==='auth/invalid-credential') {
-        Alert.alert("Invalid credentials", "Please check your email and password.");
-      }
-    });
+
   }
 
   return (

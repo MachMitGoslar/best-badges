@@ -1,30 +1,9 @@
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "@react-native-firebase/auth";
-import { useRouter, Stack } from "expo-router";
 import { View } from "react-native";
-import { FirebaseAuthTypes } from "@react-native-firebase/auth";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useAuth } from '@/contexts/authContext';
 
 export default function Index() {
-const router = useRouter();
-const auth = getAuth();
-const [ user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
-
-  async function checkLoginStatus() {
-    try {
-      onAuthStateChanged(auth, (user: FirebaseAuthTypes.User) => {
-        if (user) {
-          setUser(user);
-          console.log("Actual User: " + user.email);
-          console.log("User ID: " + user.uid);
-          router.replace("./(tabs)/home");
-        } else {
-          console.log("No user is logged in.");
-          setUser(null);
-          router.replace("/login");
-        }
-      });
-    } catch (error) {}
-  }
+const { checkLoginStatus } = useAuth();
 
   useEffect(() => {
     checkLoginStatus();
