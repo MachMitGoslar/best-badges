@@ -1,5 +1,5 @@
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "@react-native-firebase/auth";
-import { useRouter, Stack } from "expo-router";
+import { useRouter, Stack, router } from "expo-router";
 import { View } from "react-native";
 import { Text, Button } from "react-native";
 import { FirebaseAuthTypes } from "@react-native-firebase/auth";
@@ -74,7 +74,7 @@ const badgeData: { id: string; condition: string; description: string; created: 
         >
           <Text style={styles.buttonText}>Login</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => {}}>
+        <TouchableOpacity onPress={() => {router.replace('/signup')}}>
           <Text style={styles.signUp}>
             Don't have an account? <Text style={styles.signUpLink}>Sign Up</Text>
           </Text>

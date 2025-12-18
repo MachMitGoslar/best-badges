@@ -10,6 +10,7 @@ interface AuthContextType {
     checkLoginStatus: () => void;
     signInUser: (email: string, password: string) => Promise<void>;
     signOutUser: () => Promise<void>;
+    signUpUser: (email: string, password: string) => Promise<void>;
 }
 
 interface AuthProviderProps {
@@ -96,7 +97,7 @@ function AuthProvider({ children }: AuthProviderProps) {
         }
     }
 
-    return <AuthContext.Provider value={{ activeUser, checkLoginStatus, signInUser, signOutUser }}>{children}</AuthContext.Provider>;
+    return <AuthContext.Provider value={{ activeUser, checkLoginStatus, signInUser, signOutUser, signUpUser }}>{children}</AuthContext.Provider>;
 }
 
 function useAuth(): AuthContextType {
