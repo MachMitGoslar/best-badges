@@ -72,6 +72,30 @@ function AuthProvider({ children }: AuthProviderProps) {
         }
     }
 
+    async function signInUserWithPopUp(email: string, password: string) {
+        /// Login with OIDC
+        // try {
+        //     console.log('Login attempt with email: ' + email);
+
+        //     signInWithEmailAndPassword(auth, email, password).then((userCredential) => {
+        //         const user = userCredential.user;
+        //         console.log('User logged in: ' + user.uid);
+
+        //         setDoc(doc(db, 'users', user.uid), {
+        //             email: user.email,
+        //             lastLogin: new Date(),
+        //         });
+
+        //         return user.uid as string;
+        //     });
+        // } catch (error: any) {
+        //     console.error('Login error: ', error);
+        //     if (error.code === 'auth/invalid-credential') {
+        //         Alert.alert('Invalid credentials', 'Please check your email and password.');
+        //     }
+        // }
+    }
+
     // Sign out user and clear the active user from global state
     // and navigate back to login screen
     async function signOutUser() {
