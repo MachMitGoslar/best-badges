@@ -1,0 +1,1665 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Best Badges API",
+    "version": "0.1.0"
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Api-Key"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "message"
+              ]
+            }
+          }
+        },
+        "required": [
+          "error",
+          "message"
+        ]
+      },
+      "PublicAchievement": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/PublicAchievementDetails"
+          },
+          {
+            "$ref": "#/components/schemas/SecretAchievement"
+          }
+        ]
+      },
+      "PublicAchievementDetails": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AchievementSummary"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "category": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "tiers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "level": {
+                      "type": "integer"
+                    },
+                    "threshold": {
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "level",
+                    "threshold",
+                    "name"
+                  ]
+                }
+              },
+              "requiredCount": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Nur Kombination: benötigte Teile (N von M)"
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AchievementRef"
+                },
+                "description": "Nur Kombination: die Teile"
+              },
+              "publishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "description",
+              "category",
+              "tiers",
+              "requiredCount",
+              "items",
+              "publishedAt"
+            ]
+          }
+        ]
+      },
+      "AchievementRef": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/AchievementSummary"
+          },
+          {
+            "$ref": "#/components/schemas/SecretAchievement"
+          }
+        ]
+      },
+      "AchievementSummary": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orgId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "single",
+              "tiered",
+              "collection"
+            ]
+          },
+          "spec": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "number",
+                "enum": [
+                  1
+                ]
+              },
+              "frame": {
+                "type": "string",
+                "enum": [
+                  "classic"
+                ]
+              },
+              "emblem": {
+                "type": "object",
+                "properties": {
+                  "shape": {
+                    "type": "string",
+                    "enum": [
+                      "circle",
+                      "shield",
+                      "hexagon",
+                      "diamond"
+                    ]
+                  },
+                  "pattern": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "rays",
+                      "waves",
+                      "forest",
+                      "mountains",
+                      "timber",
+                      "dots"
+                    ]
+                  },
+                  "motif": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "icon"
+                            ]
+                          },
+                          "ref": {
+                            "type": "string",
+                            "enum": [
+                              "tree",
+                              "trees",
+                              "leaf",
+                              "plant-2",
+                              "mushroom",
+                              "mountain",
+                              "tent",
+                              "binoculars",
+                              "compass",
+                              "map-pin",
+                              "map-2",
+                              "route",
+                              "walk",
+                              "run",
+                              "bike",
+                              "swimming",
+                              "ball-football",
+                              "building-castle",
+                              "building-church",
+                              "building-monument",
+                              "building-bank",
+                              "pick",
+                              "hammer",
+                              "tools",
+                              "book",
+                              "books",
+                              "school",
+                              "certificate",
+                              "bulb",
+                              "puzzle",
+                              "chess-knight",
+                              "music",
+                              "microphone",
+                              "masks-theater",
+                              "palette",
+                              "brush",
+                              "camera",
+                              "coffee",
+                              "cake",
+                              "gift",
+                              "shopping-bag",
+                              "ticket",
+                              "users",
+                              "heart-handshake",
+                              "recycle",
+                              "heart",
+                              "star",
+                              "sparkles",
+                              "flame",
+                              "sun",
+                              "moon",
+                              "snowflake",
+                              "droplet",
+                              "fish",
+                              "paw",
+                              "feather",
+                              "trophy",
+                              "medal",
+                              "crown",
+                              "diamond",
+                              "key",
+                              "flag",
+                              "clock",
+                              "rocket",
+                              "train",
+                              "bus",
+                              "question-mark",
+                              "stack-2"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "ref"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "monogram"
+                            ]
+                          },
+                          "text": {
+                            "type": "string",
+                            "pattern": "^[\\p{L}\\p{N}]{1,3}$/u"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "text"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "logo"
+                            ]
+                          },
+                          "url": {
+                            "type": "string",
+                            "maxLength": 2048
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "url"
+                        ]
+                      }
+                    ]
+                  },
+                  "palette": {
+                    "type": "string",
+                    "enum": [
+                      "moss",
+                      "forest",
+                      "harz",
+                      "river",
+                      "slate",
+                      "ore",
+                      "kaiser",
+                      "sunset",
+                      "mango",
+                      "heather",
+                      "night",
+                      "granite",
+                      "lager"
+                    ]
+                  }
+                },
+                "required": [
+                  "shape",
+                  "pattern",
+                  "motif",
+                  "palette"
+                ]
+              }
+            },
+            "required": [
+              "version",
+              "frame",
+              "emblem"
+            ]
+          },
+          "hidden": {
+            "type": "boolean",
+            "description": "War versteckt – die Person hat es gefunden"
+          }
+        },
+        "required": [
+          "secret",
+          "id",
+          "orgId",
+          "name",
+          "kind",
+          "spec",
+          "hidden"
+        ]
+      },
+      "SecretAchievement": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orgId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "hint": {
+            "type": "string",
+            "description": "Öffentlicher Hinweis der Organisation (kann leer sein)"
+          }
+        },
+        "required": [
+          "secret",
+          "id",
+          "orgId",
+          "hint"
+        ],
+        "description": "Verstecktes Abzeichen, das die Person noch nicht hat. Ohne Name, Design und Struktur; den Platzhalter zeichnet der Client selbst (badge-spec: SECRET_SPEC)."
+      },
+      "MyProfile": {
+        "type": "object",
+        "properties": {
+          "handle": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "public": {
+            "type": "boolean"
+          },
+          "showcase": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Öffentliche Adresse, nur wenn das Profil öffentlich ist"
+          }
+        },
+        "required": [
+          "handle",
+          "displayName",
+          "public",
+          "showcase",
+          "url"
+        ]
+      },
+      "ProfileInput": {
+        "type": "object",
+        "properties": {
+          "handle": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[a-z0-9](?:[a-z0-9-]{1,28})[a-z0-9]$"
+          },
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 40
+          },
+          "public": {
+            "type": "boolean"
+          },
+          "showcase": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "maxItems": 6
+          }
+        }
+      },
+      "PublicProfile": {
+        "type": "object",
+        "properties": {
+          "handle": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "badges": {
+                "type": "integer"
+              },
+              "tiers": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "badges",
+              "tiers"
+            ]
+          },
+          "showcase": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "achievement": {
+                  "$ref": "#/components/schemas/AchievementRef"
+                },
+                "tier": {
+                  "type": "integer"
+                },
+                "tierCount": {
+                  "type": "integer"
+                },
+                "progress": {
+                  "type": "integer"
+                },
+                "requiredCount": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "achievement",
+                "tier",
+                "tierCount",
+                "progress",
+                "requiredCount"
+              ]
+            }
+          }
+        },
+        "required": [
+          "handle",
+          "displayName",
+          "stats",
+          "showcase"
+        ]
+      },
+      "RedeemSuccess": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success"
+            ]
+          },
+          "achievement": {
+            "$ref": "#/components/schemas/AchievementRef"
+          },
+          "value": {
+            "type": "integer"
+          },
+          "progress": {
+            "type": "integer"
+          },
+          "previousTier": {
+            "type": "integer"
+          },
+          "tier": {
+            "type": "integer"
+          },
+          "tierCount": {
+            "type": "integer"
+          },
+          "tierUp": {
+            "type": "boolean"
+          },
+          "firstTime": {
+            "type": "boolean"
+          },
+          "nextThreshold": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "awardedText": {
+            "type": "string"
+          },
+          "collections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollectionUnlock"
+            },
+            "description": "Kombinationen, die durch diese Einlösung vorankommen"
+          }
+        },
+        "required": [
+          "status",
+          "achievement",
+          "value",
+          "progress",
+          "previousTier",
+          "tier",
+          "tierCount",
+          "tierUp",
+          "firstTime",
+          "nextThreshold",
+          "awardedText",
+          "collections"
+        ]
+      },
+      "CollectionUnlock": {
+        "type": "object",
+        "properties": {
+          "achievement": {
+            "$ref": "#/components/schemas/AchievementRef"
+          },
+          "progress": {
+            "type": "integer"
+          },
+          "requiredCount": {
+            "type": "integer"
+          },
+          "completed": {
+            "type": "boolean"
+          },
+          "firstTime": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "achievement",
+          "progress",
+          "requiredCount",
+          "completed",
+          "firstTime"
+        ]
+      },
+      "RedeemFailure": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Error"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "retryAfterSeconds": {
+                "type": "integer"
+              }
+            }
+          }
+        ]
+      },
+      "RedeemInput": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Gescannter QR-Inhalt (Link) oder das Token"
+          },
+          "geo": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "lat": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "lng": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              },
+              "accuracyM": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 10000
+              }
+            },
+            "required": [
+              "lat",
+              "lng"
+            ]
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "RedeemPreview": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "achievement": {
+            "$ref": "#/components/schemas/AchievementRef"
+          },
+          "template": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "station",
+              "event",
+              "checkout",
+              "voucher",
+              null
+            ]
+          },
+          "value": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "award": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "progress": {
+                "type": "integer"
+              },
+              "tier": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "progress",
+              "tier"
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "message",
+          "achievement",
+          "template",
+          "value",
+          "award"
+        ]
+      },
+      "Award": {
+        "type": "object",
+        "properties": {
+          "achievement": {
+            "$ref": "#/components/schemas/AchievementRef"
+          },
+          "progress": {
+            "type": "integer"
+          },
+          "tier": {
+            "type": "integer"
+          },
+          "tierCount": {
+            "type": "integer"
+          },
+          "nextThreshold": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "requiredCount": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Nur Kombination: benötigte Teile"
+          },
+          "firstEarnedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "achievement",
+          "progress",
+          "tier",
+          "tierCount",
+          "nextThreshold",
+          "requiredCount",
+          "firstEarnedAt",
+          "updatedAt"
+        ]
+      },
+      "DirectAwardResult": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success"
+            ]
+          },
+          "achievement": {
+            "$ref": "#/components/schemas/AchievementSummary"
+          },
+          "value": {
+            "type": "integer"
+          },
+          "progress": {
+            "type": "integer"
+          },
+          "previousTier": {
+            "type": "integer"
+          },
+          "tier": {
+            "type": "integer"
+          },
+          "tierCount": {
+            "type": "integer"
+          },
+          "tierUp": {
+            "type": "boolean"
+          },
+          "firstTime": {
+            "type": "boolean"
+          },
+          "nextThreshold": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "awardedText": {
+            "type": "string"
+          },
+          "collections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollectionUnlock"
+            }
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status",
+          "achievement",
+          "value",
+          "progress",
+          "previousTier",
+          "tier",
+          "tierCount",
+          "tierUp",
+          "firstTime",
+          "nextThreshold",
+          "awardedText",
+          "collections",
+          "replayed"
+        ]
+      },
+      "DirectAwardInput": {
+        "type": "object",
+        "properties": {
+          "achievementId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userSub": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Kennung der Person bei der Goslar ID (sub)"
+          },
+          "value": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "reference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Eigene Kennung des Vorgangs, z. B. Bonnummer. Macht die Vergabe idempotent."
+          }
+        },
+        "required": [
+          "achievementId",
+          "userSub"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/api/v1/achievements": {
+      "get": {
+        "tags": [
+          "Öffentlich"
+        ],
+        "summary": "Veröffentlichte Abzeichen",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "orgId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PublicAchievement"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/achievements/{id}": {
+      "get": {
+        "tags": [
+          "Öffentlich"
+        ],
+        "summary": "Ein veröffentlichtes Abzeichen",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Abzeichen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicAchievement"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/achievements/{id}/image.svg": {
+      "get": {
+        "tags": [
+          "Öffentlich"
+        ],
+        "summary": "Abzeichen als SVG-Bild",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            },
+            "required": false,
+            "name": "tier",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "common",
+                "rare",
+                "epic",
+                "legendary"
+              ]
+            },
+            "required": false,
+            "name": "rarity",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "locked",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 32,
+              "maximum": 1024
+            },
+            "required": false,
+            "name": "size",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SVG",
+            "content": {
+              "image/svg+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/profile": {
+      "get": {
+        "tags": [
+          "Profil"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eigenes Profil und Showcase (privat, bis du es öffentlich schaltest)",
+        "responses": {
+          "200": {
+            "description": "Profil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Profil"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Profil ändern: Kürzel, Anzeigename, öffentlich, Showcase (bis zu 6 gesammelte Abzeichen)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Gespeichert",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflikt mit dem aktuellen Zustand",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ungültige Eingabe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/{handle}": {
+      "get": {
+        "tags": [
+          "Profil"
+        ],
+        "summary": "Öffentliches Profil mit Showcase",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 30
+            },
+            "required": true,
+            "name": "handle",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicProfile"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/redemptions": {
+      "post": {
+        "tags": [
+          "Einlösen"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Gescannten Code einlösen",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedeemInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Eingelöst",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemSuccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Außerhalb des erlaubten Ortes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Code unbekannt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Limit pro Person erreicht oder Wartezeit läuft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemFailure"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Code abgelaufen, inaktiv, ausgeschöpft oder Abzeichen nicht verfügbar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemFailure"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ungültige Eingabe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Zu viele Versuche",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/redemptions/preview": {
+      "get": {
+        "tags": [
+          "Einlösen"
+        ],
+        "summary": "Vorschau eines gescannten Codes (verbraucht nichts; mit Anmeldung inkl. eigenem Fortschritt)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "required": true,
+            "name": "code",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vorschau",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemPreview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/awards": {
+      "get": {
+        "tags": [
+          "Sammlung"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eigene Sammlung mit Fortschritt",
+        "responses": {
+          "200": {
+            "description": "Sammlung",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Award"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/awards": {
+      "post": {
+        "tags": [
+          "Integrationen"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "Abzeichen direkt an eine Person vergeben (mit reference idempotent)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectAwardInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vergeben oder Wiederholung",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectAwardResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Schlüssel fehlt oder ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Recht fehlt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflikt mit dem aktuellen Zustand",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Nicht verfügbar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ungültige Eingabe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Zu viele Anfragen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/codes/{id}/mint": {
+      "post": {
+        "tags": [
+          "Integrationen"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "Kassensystem: einmaligen QR-Code mit Wert erzeugen (z. B. für den Bon)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  }
+                },
+                "required": [
+                  "value"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Einmal-Code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "integer"
+                    },
+                    "expiresAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url",
+                    "value",
+                    "expiresAt"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Schlüssel fehlt oder ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Recht fehlt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflikt mit dem aktuellen Zustand",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Nicht verfügbar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ungültige Eingabe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Zu viele Anfragen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

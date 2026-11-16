@@ -1,0 +1,24 @@
+{
+  "name": "best-badges",
+  "private": true,
+  "packageManager": "pnpm@10.18.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:infra": "docker compose up -d --wait",
+    "dev:api": "pnpm --filter @best-badges/api dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "postinstall": "pnpm --filter @best-badges/badge-3d build:webview"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ],
+    "patchedDependencies": {
+      "expo-modules-jsi@58.0.23": "patches/expo-modules-jsi@58.0.23.patch"
+    }
+  }
+}

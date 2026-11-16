@@ -1,0 +1,25 @@
+{
+  "name": "@best-badges/badge-3d",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build:webview": "node scripts/build-webview.mjs"
+  },
+  "dependencies": {
+    "@best-badges/badge-render": "workspace:*",
+    "@best-badges/badge-spec": "workspace:*",
+    "@best-badges/design-tokens": "workspace:*"
+  },
+  "peerDependencies": {
+    "three": "*"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0",
+    "three": "^0.187.0",
+    "typescript": "^5.9.3"
+  }
+}

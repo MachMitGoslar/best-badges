@@ -1,0 +1,44 @@
+{
+  "name": "@best-badges/manage",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n bff,web -c yellow,cyan \"pnpm dev:bff\" \"pnpm dev:web\"",
+    "dev:bff": "tsx watch --env-file=../../.env server/index.ts",
+    "dev:web": "vite",
+    "build": "vite build",
+    "start": "NODE_ENV=production tsx --env-file=../../.env server/index.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@best-badges/api-client": "workspace:*",
+    "@best-badges/badge-3d": "workspace:*",
+    "@best-badges/badge-render": "workspace:*",
+    "@best-badges/badge-spec": "workspace:*",
+    "@best-badges/design-tokens": "workspace:*",
+    "@fontsource-variable/inter": "^5.2.8",
+    "@hono/node-server": "^1.19.5",
+    "@tanstack/react-query": "^5.90.2",
+    "hono": "^4.9.10",
+    "jose": "^6.1.0",
+    "qrcode": "^1.5.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router": "^7.9.4",
+    "three": "^0.187.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.10",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.1.16",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.4",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.9",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "interactiveLogin": true,
+  "httpServer": "NettyWrapper",
+  "tokenCallbacks": [
+    {
+      "issuerId": "goslarid",
+      "tokenExpiry": 3600,
+      "requestMappings": [
+        {
+          "requestParam": "grant_type",
+          "match": "*",
+          "claims": {
+            "aud": ["badges-api"],
+            "scope": "openid profile email offline_access"
+          }
+        }
+      ]
+    }
+  ]
+}

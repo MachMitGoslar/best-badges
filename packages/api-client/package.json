@@ -1,0 +1,12 @@
+{
+  "name": "@best-badges/api-client",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "generate": "pnpm --filter @best-badges/api openapi && openapi-typescript openapi.json -o src/schema.d.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": { "openapi-fetch": "^0.14.1" },
+  "devDependencies": { "openapi-typescript": "^7.9.1", "typescript": "^5.9.3" }
+}

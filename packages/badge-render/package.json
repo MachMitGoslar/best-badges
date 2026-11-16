@@ -1,0 +1,23 @@
+{
+  "name": "@best-badges/badge-render",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "preview": "tsx scripts/preview.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@best-badges/badge-spec": "workspace:*",
+    "@best-badges/design-tokens": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.10",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,6 @@
+/ios
+/android
+.expo/
+expo-env.d.ts
+# Erzeugt aus packages/badge-3d (pnpm web3d bzw. postinstall)
+/src/web3d/medal-html.generated.ts

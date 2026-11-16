@@ -1,0 +1,26 @@
+diff --git a/apple/Sources/ExpoModulesJSI/Runtime/Values/JavaScriptObject.swift b/apple/Sources/ExpoModulesJSI/Runtime/Values/JavaScriptObject.swift
+index de76b9762d8f3cdd05a68fca7a01e8f1b0af973f..a1364932c036aa9cfdbb3c0924a27adbc009a5b1 100644
+--- a/apple/Sources/ExpoModulesJSI/Runtime/Values/JavaScriptObject.swift
++++ b/apple/Sources/ExpoModulesJSI/Runtime/Values/JavaScriptObject.swift
+@@ -941,11 +941,20 @@ private func withEncodedValue(
+     }
+     // The runtime can't be deallocated during a call on its JavaScript thread, so it's borrowed without
+     // a retain.
++    // best-badges: Zeiger in einer Sendable-Hülle übergeben. Xcode 26.3 meldet sonst trotz
++    // nonisolated(unsafe) „sending 'slot' risks causing data races“. Die Closure läuft synchron.
++    let box = BestBadgesUnsafeSlotBox(pointer: slot)
+     try runtime._withUnsafeGuaranteedRef { runtime in
+       try JavaScriptActor.assumeIsolated {
+-        try encode(JavaScriptValue.Slot(slot), runtime)
++        try encode(JavaScriptValue.Slot(box.pointer), runtime)
+       }
+     }
+     body(slot.pointee)
+   }
+ }
++
++
++/// best-badges: Hülle, um einen nur synchron genutzten Zeiger an eine isolierte Closure zu geben.
++private struct BestBadgesUnsafeSlotBox: @unchecked Sendable {
++  let pointer: UnsafeMutablePointer<facebook.jsi.Value>
++}

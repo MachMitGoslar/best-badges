@@ -1,0 +1,24 @@
+{
+  "name": "@best-badges/badge-spec",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "gen:icons": "tsx scripts/gen-icons.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.1.12",
+    "@best-badges/design-tokens": "workspace:*"
+  },
+  "devDependencies": {
+    "@tabler/icons": "3.35.0",
+    "@types/node": "^22.18.10",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

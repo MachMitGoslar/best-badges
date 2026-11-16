@@ -1,0 +1,51 @@
+{
+  "name": "@best-badges/app",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "web3d": "pnpm --filter @best-badges/badge-3d build:webview",
+    "start": "pnpm web3d && expo start --dev-client",
+    "ios": "pnpm web3d && expo run:ios",
+    "typecheck": "pnpm web3d && tsc --noEmit"
+  },
+  "dependencies": {
+    "@best-badges/api-client": "workspace:*",
+    "@best-badges/badge-3d": "workspace:*",
+    "@best-badges/badge-render": "workspace:*",
+    "@best-badges/badge-spec": "workspace:*",
+    "@best-badges/design-tokens": "workspace:*",
+    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo/vector-icons": "^15.1.1",
+    "@shopify/react-native-skia": "2.14.0",
+    "@tanstack/react-query": "^5.90.2",
+    "@types/react": "~19.3.0",
+    "expo": "~58.0.25",
+    "expo-auth-session": "~58.0.18",
+    "expo-camera": "~58.0.14",
+    "expo-constants": "~58.0.16",
+    "expo-crypto": "~58.0.8",
+    "expo-dev-client": "~58.0.20",
+    "expo-font": "~58.0.12",
+    "expo-gl": "~58.0.4",
+    "expo-haptics": "~58.0.8",
+    "expo-linking": "~58.0.17",
+    "expo-router": "~58.0.31",
+    "expo-secure-store": "~58.0.3",
+    "expo-status-bar": "~58.0.5",
+    "expo-web-browser": "~58.0.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-gesture-handler": "~3.3.0",
+    "react-native-reanimated": "4.7.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-screens": "~4.30.1",
+    "react-native-web": "^0.21.4",
+    "react-native-webview": "14.0.1",
+    "react-native-worklets": "0.13.0",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

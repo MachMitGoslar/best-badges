@@ -1,0 +1,32 @@
+{
+  "name": "@best-badges/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=../../.env src/index.ts",
+    "start": "tsx --env-file=../../.env src/index.ts",
+    "migrate": "tsx --env-file=../../.env src/db/migrate-cli.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "openapi": "tsx src/openapi-export.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.5",
+    "hono": "^4.9.10",
+    "jose": "^6.1.0",
+    "zod": "^4.1.12",
+    "@best-badges/badge-render": "workspace:*",
+    "@best-badges/badge-spec": "workspace:*",
+    "@hono/swagger-ui": "^0.5.2",
+    "@hono/zod-openapi": "^1.1.0",
+    "kysely": "^0.28.7",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.10",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4",
+    "@types/pg": "^8.15.5"
+  }
+}
