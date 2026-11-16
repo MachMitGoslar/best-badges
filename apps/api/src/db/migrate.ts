@@ -1,10 +1,14 @@
 // Einfacher Migrationsrunner: wendet migrations/NNN_*.sql der Reihe nach an,
 // jede Datei in einer eigenen Transaktion, geschützt durch ein Advisory Lock.
 import { readdir, readFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
 import { sql } from 'kysely';
 import type { Database } from './index.ts';
 
-const MIGRATIONS_DIR = new URL('../../migrations/', import.meta.url);
+// Im Container liegt der Code gebündelt woanders: dann MIGRATIONS_DIR setzen
+const MIGRATIONS_DIR = process.env.MIGRATIONS_DIR
+  ? pathToFileURL(process.env.MIGRATIONS_DIR.replace(/\/?$/, '/'))
+  : new URL('../../migrations/', import.meta.url);
 const LOCK_KEY = 4711_2026;
 
 export async function migrate(db: Database, log: (msg: string) => void = console.log): Promise<string[]> {

@@ -1,0 +1,65 @@
+{
+  "_comment": "Testumgebung: Schlüssel von users = Authentik-Benutzername (sub). Neue Testperson: Eintrag ergänzen, dann docker compose restart mock-hsp.",
+  "organisations": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "MachMit! Goslar",
+      "street": "Marktstraße",
+      "number": "1",
+      "postcode": "38640",
+      "city": "Goslar",
+      "logoFileUrl": null,
+      "description": "Haupt-Admin-Organisation der Badge-Plattform",
+      "websiteUrl": "https://example.test/machmit",
+      "contactEmail": "kontakt@example.test"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "name": "Walderlebnispfad Goslar",
+      "street": "Am Wald",
+      "number": "7",
+      "postcode": "38640",
+      "city": "Goslar",
+      "logoFileUrl": null,
+      "description": "Erlebnispfad mit zehn Stationen",
+      "websiteUrl": "https://example.test/waldpfad",
+      "contactEmail": "wald@example.test"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "name": "Stadtmuseum Goslar",
+      "street": "Königstraße",
+      "number": "1",
+      "postcode": "38640",
+      "city": "Goslar",
+      "logoFileUrl": null,
+      "description": "Museum zur Stadtgeschichte",
+      "websiteUrl": "https://example.test/museum",
+      "contactEmail": "museum@example.test"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "name": "Stadtbibliothek Goslar",
+      "street": "Marktkirchhof",
+      "number": "2",
+      "postcode": "38640",
+      "city": "Goslar",
+      "logoFileUrl": null,
+      "description": "Bibliothek mit Leseclub",
+      "websiteUrl": "https://example.test/bibliothek",
+      "contactEmail": "bibliothek@example.test"
+    }
+  ],
+  "users": {
+    "stuff": {
+      "id": "b0000000-0000-4000-8000-000000000001",
+      "firstName": "Admin",
+      "lastName": "Test",
+      "memberships": [
+        "00000000-0000-4000-8000-000000000001",
+        "00000000-0000-4000-8000-000000000002",
+        "00000000-0000-4000-8000-000000000003"
+      ]
+    }
+  }
+}

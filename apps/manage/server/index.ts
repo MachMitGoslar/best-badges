@@ -22,6 +22,6 @@ if (config.NODE_ENV === 'production') {
   app.get('*', (c) => c.html(index));
 }
 
-serve({ fetch: app.fetch, port: config.MANAGE_BFF_PORT, hostname: '127.0.0.1' }, (i) => {
-  console.log(`Verwaltung (BFF) läuft auf http://127.0.0.1:${i.port}, öffentlich unter ${config.MANAGE_PUBLIC_URL}`);
+serve({ fetch: app.fetch, port: config.MANAGE_BFF_PORT, hostname: config.MANAGE_BFF_HOST }, (i) => {
+  console.log(`Verwaltung (BFF) läuft auf http://${config.MANAGE_BFF_HOST}:${i.port}, öffentlich unter ${config.MANAGE_PUBLIC_URL}`);
 });

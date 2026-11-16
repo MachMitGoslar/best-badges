@@ -31,7 +31,7 @@ export const directory: OrgDirectory = {
 export const TEST_DB_URL = process.env.TEST_DATABASE_URL ?? 'postgres://badges:badges-dev@127.0.0.1:5433/badges_test';
 
 export const testConfig = (over: Partial<Config> = {}): Config => ({
-  PORT: 0, NODE_ENV: 'test', DATABASE_URL: TEST_DB_URL, OIDC_ISSUER: ISS, OIDC_AUDIENCE: 'badges-api',
+  PORT: 0, HOST: '127.0.0.1', NODE_ENV: 'test', DATABASE_URL: TEST_DB_URL, OIDC_ISSUER: ISS, OIDC_AUDIENCE: 'badges-api',
   HSP_BASE_URL: 'http://hsp.test', ADMIN_ORG_ID: ADMIN_ORG, PUBLIC_BASE_URL: 'https://badges.test',
   MIGRATE_ON_START: false, CORS_ORIGINS: [], HSP_MEMBERSHIP_TTL: 600, HSP_ORG_TTL: 600, ...over,
 });

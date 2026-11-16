@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 const schema = z.object({
   PORT: z.coerce.number().int().default(3001),
+  /** Lauschadresse: lokal nur 127.0.0.1, im Container 0.0.0.0 (Zugang regelt dann Docker/Traefik) */
+  HOST: z.string().default('127.0.0.1'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATABASE_URL: z.string().url(),
   OIDC_ISSUER: z.string().url(),

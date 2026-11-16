@@ -5,7 +5,7 @@ import type { OidcClient, TokenSet } from './oidc.ts';
 import { SessionStore } from './sessions.ts';
 
 const config: BffConfig = {
-  NODE_ENV: 'test', MANAGE_BFF_PORT: 0, MANAGE_PUBLIC_URL: 'http://localhost:5173', OIDC_ISSUER: 'http://idp.test',
+  NODE_ENV: 'test', MANAGE_BFF_PORT: 0, MANAGE_BFF_HOST: '127.0.0.1', MANAGE_PUBLIC_URL: 'http://localhost:5173', OIDC_ISSUER: 'http://idp.test',
   OIDC_AUDIENCE: 'badges-api', MANAGE_OIDC_CLIENT_ID: 'badges-manage', MANAGE_OIDC_CLIENT_SECRET: undefined,
   API_URL: 'http://api.test', MANAGE_SESSION_TTL: 3600,
 };

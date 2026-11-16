@@ -5,7 +5,7 @@ import { createDb } from './db/index.ts';
 import { publicDocument } from './openapi.ts';
 
 const config = {
-  PORT: 0, NODE_ENV: 'test' as const, DATABASE_URL: 'postgres://unused@localhost/unused', OIDC_ISSUER: 'https://issuer.invalid',
+  PORT: 0, HOST: '127.0.0.1', NODE_ENV: 'test' as const, DATABASE_URL: 'postgres://unused@localhost/unused', OIDC_ISSUER: 'https://issuer.invalid',
   OIDC_AUDIENCE: 'badges-api', HSP_BASE_URL: 'https://hsp.invalid', ADMIN_ORG_ID: '00000000-0000-4000-8000-000000000001',
   PUBLIC_BASE_URL: 'https://badges.invalid', MIGRATE_ON_START: false, CORS_ORIGINS: [], HSP_MEMBERSHIP_TTL: 1, HSP_ORG_TTL: 1,
 };

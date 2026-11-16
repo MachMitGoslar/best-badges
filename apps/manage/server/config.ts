@@ -3,6 +3,8 @@ import { z } from 'zod';
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   MANAGE_BFF_PORT: z.coerce.number().int().default(5174),
+  /** Lauschadresse: lokal nur 127.0.0.1, im Container 0.0.0.0 */
+  MANAGE_BFF_HOST: z.string().default('127.0.0.1'),
   /** Öffentliche Adresse der Verwaltung (in der Entwicklung der Vite-Server) */
   MANAGE_PUBLIC_URL: z.string().url().default('http://localhost:5173').transform((u) => u.replace(/\/$/, '')),
   OIDC_ISSUER: z.string().url(),

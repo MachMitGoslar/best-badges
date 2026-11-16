@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { Database } from './db/index.ts';
+import { BODY_LIMIT } from './app.ts';
 import { WALD_ORG, freshDatabase, signToken, testApp } from './test/helpers.ts';
 
 let db: Database;
@@ -11,6 +12,11 @@ afterAll(async () => { await db.destroy(); });
 const withToken = async (token: string) => (await app.request('/api/v1/me', { headers: { Authorization: `Bearer ${token}` } })).status;
 
 describe('Auth', () => {
+  it('weist zu große Anfragen ab, bevor sie gelesen werden', async () => {
+    const res = await app.request('/api/v1/me', { method: 'POST', headers: { 'content-type': 'application/json' }, body: 'x'.repeat(BODY_LIMIT + 1) });
+    expect(res.status).toBe(413);
+  });
+
   it('lehnt Anfragen ohne Token ab', async () => {
     expect((await call('GET', '/api/v1/me')).status).toBe(401);
   });

@@ -5,6 +5,7 @@ import { swaggerUI } from '@hono/swagger-ui';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { logger } from 'hono/logger';
+import { bodyLimit } from 'hono/body-limit';
 import { ZodError } from 'zod';
 import type { JWTVerifyGetKey } from 'jose';
 import type { Config } from './config.ts';
@@ -26,6 +27,9 @@ import { collectionRoutes } from './routes/collections.ts';
 import { profileRoutes } from './routes/profiles.ts';
 import { ProfileService } from './services/profiles.ts';
 import { ApiKeyService } from './services/apiKeys.ts';
+
+/** Höchstgröße einer Anfrage (Bytes) */
+export const BODY_LIMIT = 512 * 1024;
 
 const MeSchema = z.object({
   sub: z.string(),
@@ -69,7 +73,13 @@ export function createApp({ config, directory, db, authKeys, now = Date.now }: A
   const keys = new ApiKeyService(db, now);
   const profiles = new ProfileService(db, config.PUBLIC_BASE_URL, now);
 
-  if (config.NODE_ENV !== 'test') app.use('*', logger());
+  if (config.NODE_ENV !== 'test') {
+    const log = logger();
+    // Healthchecks (alle 15 s) nicht protokollieren
+    app.use('*', (c, next) => (c.req.path === '/health' ? next() : log(c, next)));
+  }
+  // Öffentlich erreichbar: Anfragen begrenzen, bevor irgendetwas sie liest (alle Eingaben sind kleines JSON)
+  app.use('*', bodyLimit({ maxSize: BODY_LIMIT, onError: (c) => c.json({ error: 'Payload Too Large', message: 'Anfrage zu groß' }, 413) }));
   app.use('*', secureHeaders());
   app.use('*', cors({
     origin: (origin) => (config.CORS_ORIGINS.includes(origin) ? origin : null),

@@ -1,6 +1,7 @@
 import { Hono, type Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { secureHeaders } from 'hono/secure-headers';
+import { bodyLimit } from 'hono/body-limit';
 import { decodeJwt } from 'jose';
 import type { BffConfig } from './config.ts';
 import type { OidcClient, TokenSet } from './oidc.ts';
@@ -118,7 +119,7 @@ export function createBffApp({ config, oidc, sessions, fetchApi = fetch, now = D
   }
 
   // Weiterleitung an die Badge-API mit dem Token der Sitzung
-  app.all('/api/*', csrf, async (c) => {
+  app.all('/api/*', csrf, bodyLimit({ maxSize: 512 * 1024, onError: (c) => c.json({ error: 'Payload Too Large', message: 'Anfrage zu groß' }, 413) }), async (c) => {
     const sid = getCookie(c, SESSION_COOKIE);
     const s = sessions.get(sid);
     const headers: Record<string, string> = { accept: c.req.header('accept') ?? 'application/json' };

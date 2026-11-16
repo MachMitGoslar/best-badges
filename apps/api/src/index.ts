@@ -15,8 +15,8 @@ const directory = new HspOrgDirectory(config.HSP_BASE_URL, {
 });
 const app = createApp({ config, directory, db });
 
-const server = serve({ fetch: app.fetch, port: config.PORT, hostname: '127.0.0.1' }, (info) => {
-  console.log(`Badge-API läuft auf http://127.0.0.1:${info.port} (Doku: /docs)`);
+const server = serve({ fetch: app.fetch, port: config.PORT, hostname: config.HOST }, (info) => {
+  console.log(`Badge-API läuft auf http://${config.HOST}:${info.port} (Doku: /docs)`);
 });
 
 const shutdown = () => server.close(() => void db.destroy().then(() => process.exit(0)));
