@@ -36,10 +36,30 @@ async function save(t: Tokens | null) {
   set(t ? { status: 'signedIn', tokens: t } : { status: 'signedOut', tokens: null });
 }
 
-const fromResponse = (r: AuthSession.TokenResponse, previousRefresh: string | null = null): Tokens => ({
-  accessToken: r.accessToken,
-  refreshToken: r.refreshToken ?? previousRefresh,
-  expiresAt: (r.issuedAt + (r.expiresIn ?? 300)) * 1000,
+interface TokenJson { access_token?: string; refresh_token?: string; expires_in?: number; error?: string; error_description?: string }
+
+/**
+ * Anfrage an den Token-Endpunkt – bewusst ohne exchangeCodeAsync/refreshAsync von expo-auth-session:
+ * Die schneiden den abschließenden Schrägstrich der Adresse ab (…/token/ → …/token), was manche Anbieter
+ * (authentik) mit 404 beantworten. Wir nutzen die Adresse genau so, wie die Discovery sie nennt.
+ */
+async function tokenRequest(params: Record<string, string>): Promise<TokenJson> {
+  const d = await discover();
+  if (!d.tokenEndpoint) throw new Error('OIDC-Discovery ohne token_endpoint');
+  const res = await fetch(d.tokenEndpoint, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
+    body: new URLSearchParams({ client_id: config.clientId, ...params }).toString(),
+  });
+  const json = (await res.json().catch(() => ({}))) as TokenJson;
+  if (!res.ok || !json.access_token) throw new Error(`Token-Anfrage fehlgeschlagen (${res.status}${json.error ? `, ${json.error}` : ''})`);
+  return json;
+}
+
+const fromResponse = (r: TokenJson, previousRefresh: string | null = null): Tokens => ({
+  accessToken: r.access_token!,
+  refreshToken: r.refresh_token ?? previousRefresh,
+  expiresAt: Date.now() + (r.expires_in ?? 300) * 1000,
 });
 
 /** Startet den Login im Systembrowser. Liefert false, wenn abgebrochen. */
@@ -54,15 +74,29 @@ export async function signIn(): Promise<boolean> {
   });
   const result = await request.promptAsync(d);
   if (result.type !== 'success') return false;
-  const tokens = await AuthSession.exchangeCodeAsync(
-    { clientId: config.clientId, code: result.params.code!, redirectUri, extraParams: { code_verifier: request.codeVerifier! } },
-    d,
-  );
+  const tokens = await tokenRequest({ grant_type: 'authorization_code', code: result.params.code!, redirect_uri: redirectUri, code_verifier: request.codeVerifier! });
   await save(fromResponse(tokens));
   return true;
 }
 
-export const signOut = () => save(null);
+/** Abmelden: Refresh-Token beim Anbieter widerrufen (wenn möglich), dann lokal löschen. */
+export async function signOut() {
+  const refresh = state.tokens?.refreshToken;
+  await save(null);
+  if (!refresh) return;
+  try {
+    const d = await discover();
+    if (d.revocationEndpoint) {
+      await fetch(d.revocationEndpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ client_id: config.clientId, token: refresh, token_type_hint: 'refresh_token' }).toString(),
+      });
+    }
+  } catch {
+    // Offline o. Ä.: lokal ist abgemeldet, das Token läuft beim Anbieter von selbst ab
+  }
+}
 
 let refreshing: Promise<string | null> | null = null;
 
@@ -74,7 +108,7 @@ export async function getAccessToken(): Promise<string | null> {
   if (!t.refreshToken) { await save(null); return null; }
   refreshing ??= (async () => {
     try {
-      const r = await AuthSession.refreshAsync({ clientId: config.clientId, refreshToken: t.refreshToken! }, await discover());
+      const r = await tokenRequest({ grant_type: 'refresh_token', refresh_token: t.refreshToken! });
       const next = fromResponse(r, t.refreshToken);
       await save(next);
       return next.accessToken;
