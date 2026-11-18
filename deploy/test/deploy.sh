@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Baut die Images der Testumgebung auf dem Mac (für x86_64), lädt sie auf stuffdev und startet den Stack neu.
-# Der Server baut nichts selbst: dort ist zu wenig Speicher frei.
+# Bündelt API und Verwaltung auf dem Mac, lädt nur die Bündel (wenige MB) auf stuffdev und startet den Stack neu.
+# Der Server installiert und baut nichts (zu wenig freier Speicher); er kopiert die Bündel nur in Node-Images.
 #
 # Aufruf vom Mac (Tailscale an):  deploy/test/deploy.sh
 #   DEPLOY_KEY=<ssh-schlüssel>  (Standard: ../rag_stuffdev/.ssh/id_rag_setup neben dem Projekt)
@@ -23,14 +23,20 @@ echo "== Stand $TAG → $SSH_HOST:$DIR"
 
 ssh_ "test -f $DIR/.env" || { echo "Fehlt: $DIR/.env auf dem Server (Vorlage deploy/test/env.example)"; exit 1; }
 
-echo "== Images bauen (linux/amd64)"
-for t in api manage; do
-  docker buildx build --platform linux/amd64 --target "$t" -t "best-badges-$t:$TAG" --load .
-done
-docker buildx build --platform linux/amd64 -t "best-badges-mock-hsp:$TAG" --load dev/mock-hsp
+echo "== Bündeln (auf dem Mac)"
+CTX=$(mktemp -d)
+trap 'rm -rf "$CTX"' EXIT
+docker buildx build --target bundle --output "type=local,dest=$CTX" .
+cp deploy/test/runtime.Dockerfile "$CTX/Dockerfile"
+mkdir -p "$CTX/mock-hsp" && cp -R dev/mock-hsp/Dockerfile dev/mock-hsp/src dev/mock-hsp/data "$CTX/mock-hsp/"
+echo "   $(du -sh "$CTX" | cut -f1) Bündel"
 
-echo "== Images hochladen"
-docker save "best-badges-api:$TAG" "best-badges-manage:$TAG" "best-badges-mock-hsp:$TAG" | gzip -1 | ssh_ "gunzip | docker load"
+echo "== Hochladen und Images auf dem Server zusammensetzen (nur Kopieren, kein Bauen)"
+COPYFILE_DISABLE=1 tar --no-xattrs -czf - -C "$CTX" . | ssh_ "set -e; B=\$(mktemp -d); trap 'rm -rf \$B' EXIT; tar -xzf - -C \$B
+  docker build -q --target api -t best-badges-api:$TAG \$B >/dev/null
+  docker build -q --target manage -t best-badges-manage:$TAG \$B >/dev/null
+  docker build -q -t best-badges-mock-hsp:$TAG \$B/mock-hsp >/dev/null
+  echo '   Images fertig: $TAG'"
 
 scp_ deploy/test/compose.yaml deploy/test/setup-db.sh deploy/test/env.example "$SSH_HOST:$DIR/"
 ssh_ "test -f $DIR/hsp.json" || scp_ deploy/test/hsp.json "$SSH_HOST:$DIR/hsp.json"

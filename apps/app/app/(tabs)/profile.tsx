@@ -33,7 +33,7 @@ export default function Profile() {
 
   const earned = useMemo(() => (awards.data ?? []).flatMap((a) => (a.tier > 0 && !a.achievement.secret ? [{
     id: a.achievement.id, name: a.achievement.name, spec: a.achievement.spec, kind: a.achievement.kind,
-    tier: a.tier, tierCount: a.tierCount, progress: a.progress, requiredCount: a.requiredCount,
+    tier: a.tier, tierCount: a.tierCount, progress: a.progress, requiredCount: a.requiredCount, rarity: a.rarity,
   }] : [])), [awards.data]);
 
   if (auth.status !== 'signedIn') return <Screen><LoginPrompt /></Screen>;

@@ -16,6 +16,10 @@ RUN pnpm install --frozen-lockfile --ignore-scripts \
 RUN pnpm --filter @best-badges/manage build \
  && node scripts/bundle-servers.mjs /out
 
+# Nur die gebündelten Dateien (für deploy/test/deploy.sh: wenige MB statt kompletter Images hochladen)
+FROM scratch AS bundle
+COPY --from=build /out /
+
 FROM node:24.11.1-alpine3.22 AS api
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=3001 MIGRATIONS_DIR=/app/migrations
 WORKDIR /app

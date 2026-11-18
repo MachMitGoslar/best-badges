@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import type { BadgeSpec } from '@best-badges/badge-spec';
+import type { BadgeSpec, Rarity } from '@best-badges/badge-spec';
 import { Badge } from './Badge';
 import { Badge3D } from './Badge3D';
 import { Icon } from './Icon.tsx';
@@ -15,6 +15,7 @@ export interface ShowcaseItem {
   tierCount: number;
   progress: number;
   requiredCount: number | null;
+  rarity?: Rarity | null;
 }
 
 const medalProps = (it: ShowcaseItem) => ({
@@ -22,6 +23,7 @@ const medalProps = (it: ShowcaseItem) => ({
   tier: it.kind === 'tiered' ? Math.max(1, it.tier) : undefined,
   tierCount: it.kind === 'tiered' ? it.tierCount : undefined,
   gems: it.kind === 'collection' && it.requiredCount ? { total: it.requiredCount, filled: it.requiredCount } : undefined,
+  rarity: it.rarity ?? undefined,
   title: it.name,
 });
 

@@ -69,7 +69,7 @@ export default function Success() {
       <View style={{ width: SIZE, height: SIZE, alignItems: 'center', justifyContent: 'center' }}>
         <Animated.View style={[{ position: 'absolute', width: SIZE * 1.2, height: SIZE * 1.2, borderRadius: SIZE, backgroundColor: mmh.ripeMango[200] }, flashStyle]} />
         <Animated.View style={badgeStyle}>
-          <Badge3D spinOnShow spec={ra!.spec} size={SIZE} tier={tiered ? Math.max(1, shownTier) : undefined} tierCount={tiered ? r.tierCount : undefined} locked={shownTier === 0} title={ra!.name} />
+          <Badge3D spinOnShow spec={ra!.spec} size={SIZE} tier={tiered ? Math.max(1, shownTier) : undefined} tierCount={tiered ? r.tierCount : undefined} locked={shownTier === 0} rarity={r.rarity ?? undefined} title={ra!.name} />
         </Animated.View>
         <Burst size={SIZE * 1.5} trigger={burst} />
       </View>

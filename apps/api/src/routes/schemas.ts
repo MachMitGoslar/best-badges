@@ -104,11 +104,17 @@ export const CollectionUnlockSchema = z.object({
   firstTime: z.boolean(),
 }).openapi('CollectionUnlock');
 
+const RARITY_IDS = Object.keys(RARITIES) as [keyof typeof RARITIES, ...(keyof typeof RARITIES)[]];
+/** Seltenheit der erreichten Stufe; null ohne Stufe oder bei versteckten Abzeichen (Platzhalter) */
+export const RarityField = z.enum(RARITY_IDS).nullable().openapi({
+  description: 'Seltenheit der erreichten Stufe aus dem Anteil der Sammelnden der Organisation (common, rare, epic, legendary); null ohne Stufe oder bei Platzhaltern',
+});
+
 export const VetoSchema = z.object({ reason: text(500).min(3) }).openapi('VetoInput');
 
 export const ImageQuery = z.object({
   tier: z.coerce.number().int().min(1).max(20).optional(),
-  rarity: z.enum(Object.keys(RARITIES) as [keyof typeof RARITIES, ...(keyof typeof RARITIES)[]]).optional(),
+  rarity: z.enum(RARITY_IDS).optional(),
   locked: z.enum(['true', 'false']).optional(),
   size: z.coerce.number().int().min(32).max(1024).optional(),
 });

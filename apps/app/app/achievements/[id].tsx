@@ -9,6 +9,7 @@ import { Icon } from '../../src/components/Icon.tsx';
 import { api, unwrap } from '../../src/api.ts';
 import { useAwards } from '../../src/data.ts';
 import { look } from '../../src/badges.ts';
+import { RARITIES } from '@best-badges/badge-spec';
 import { font, colors, radius } from '../../src/theme.ts';
 
 export default function AchievementDetail() {
@@ -51,9 +52,15 @@ export default function AchievementDetail() {
   return (
     <Screen>
       <ScrollView scrollEnabled={!touching} contentContainerStyle={{ padding: 20, gap: 18, alignItems: 'center', paddingBottom: 48 }}>
-        <Badge3D onInteract={setTouching} spec={a.spec} size={290} tier={tiered ? Math.max(1, tier) : undefined} tierCount={tiered ? a.tiers.length : undefined} gems={a.kind === 'collection' && a.requiredCount ? { total: a.requiredCount, filled: Math.min(progress, a.requiredCount) } : undefined} locked={tier === 0} title={a.name} />
+        <Badge3D onInteract={setTouching} spec={a.spec} size={290} tier={tiered ? Math.max(1, tier) : undefined} tierCount={tiered ? a.tiers.length : undefined} gems={a.kind === 'collection' && a.requiredCount ? { total: a.requiredCount, filled: Math.min(progress, a.requiredCount) } : undefined} locked={tier === 0} rarity={award?.rarity ?? undefined} title={a.name} />
         <Text style={[T.h1, { textAlign: 'center' }]}>{a.name}</Text>
         {tier > 0 && tiered && <Text style={{ color: colors.gold, fontFamily: font.bold }}>Stufe {tier}{a.tiers[tier - 1]?.name ? ` · ${a.tiers[tier - 1]!.name}` : ''}</Text>}
+        {award?.rarity && award.rarity !== 'common' && (
+          <View style={[s.rarity, { borderColor: colors.rarity[award.rarity] }]} accessibilityLabel={`Seltenheit: ${RARITIES[award.rarity]}`}>
+            <Icon name="star" size={13} color={colors.rarity[award.rarity]} />
+            <Text style={[s.rarityText, { color: colors.rarity[award.rarity] }]}>{RARITIES[award.rarity]}</Text>
+          </View>
+        )}
         {a.hidden && <Text style={T.label}>Geheimnis gelüftet</Text>}
         {!!a.description && <Text style={[T.body, { textAlign: 'center', color: colors.muted }]}>{a.description}</Text>}
 
@@ -130,6 +137,8 @@ export default function AchievementDetail() {
 
 const s = StyleSheet.create({
   card: { alignSelf: 'stretch', backgroundColor: colors.panel, borderRadius: radius.m, borderWidth: 1, borderColor: colors.line, padding: 16, gap: 10 },
+  rarity: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, borderWidth: 1 },
+  rarityText: { fontFamily: font.bold, fontSize: 13, letterSpacing: 0.4 },
   tierRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   items: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' },
   item: { width: 100, alignItems: 'center', gap: 4 },

@@ -2941,6 +2941,11 @@ export interface components {
                 tierCount: number;
                 progress: number;
                 requiredCount: number | null;
+                /**
+                 * @description Seltenheit der erreichten Stufe aus dem Anteil der Sammelnden der Organisation (common, rare, epic, legendary); null ohne Stufe oder bei Platzhaltern
+                 * @enum {string|null}
+                 */
+                rarity: "common" | "rare" | "epic" | "legendary" | null;
             }[];
         };
         VetoInput: {
@@ -2961,6 +2966,11 @@ export interface components {
             awardedText: string;
             /** @description Kombinationen, die durch diese Einlösung vorankommen */
             collections: components["schemas"]["CollectionUnlock"][];
+            /**
+             * @description Seltenheit der erreichten Stufe aus dem Anteil der Sammelnden der Organisation (common, rare, epic, legendary); null ohne Stufe oder bei Platzhaltern
+             * @enum {string|null}
+             */
+            rarity: "common" | "rare" | "epic" | "legendary" | null;
         };
         CollectionUnlock: {
             achievement: components["schemas"]["AchievementRef"];
@@ -3001,6 +3011,11 @@ export interface components {
             nextThreshold: number | null;
             /** @description Nur Kombination: benötigte Teile */
             requiredCount: number | null;
+            /**
+             * @description Seltenheit der erreichten Stufe aus dem Anteil der Sammelnden der Organisation (common, rare, epic, legendary); null ohne Stufe oder bei Platzhaltern
+             * @enum {string|null}
+             */
+            rarity: "common" | "rare" | "epic" | "legendary" | null;
             firstEarnedAt: string | null;
             updatedAt: string;
         };

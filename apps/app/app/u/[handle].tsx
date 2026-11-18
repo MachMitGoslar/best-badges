@@ -33,7 +33,7 @@ export default function PublicProfile() {
         <Text style={T.h2}>Showcase</Text>
         {d.showcase.length === 0
           ? <Text style={T.muted}>Noch nichts ausgestellt.</Text>
-          : <ShowcaseGrid items={d.showcase.map((x) => ({ id: x.achievement.id, name: look(x.achievement).name, spec: look(x.achievement).spec, kind: look(x.achievement).kind ?? 'single', tier: x.tier, tierCount: x.tierCount, progress: x.progress, requiredCount: x.requiredCount }))} />}
+          : <ShowcaseGrid items={d.showcase.map((x) => ({ id: x.achievement.id, name: look(x.achievement).name, spec: look(x.achievement).spec, kind: look(x.achievement).kind ?? 'single', tier: x.tier, tierCount: x.tierCount, progress: x.progress, requiredCount: x.requiredCount, rarity: x.rarity }))} />}
       </ScrollView>
     </Screen>
   );

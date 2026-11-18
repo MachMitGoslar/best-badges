@@ -35,6 +35,8 @@ services:
       # Die App ruft nativ auf (kein CORS nötig), die Verwaltung über ihren eigenen Server
       - CORS_ORIGINS=
       - INTERNAL_DOCS=false
+      # Seltenheit schon ab 3 Sammelnden je Organisation (Standard 50), damit sie mit wenigen Testpersonen sichtbar wird
+      - RARITY_MIN_COLLECTORS=3
       - TZ=Europe/Berlin
     depends_on:
       mock-hsp: { condition: service_started }

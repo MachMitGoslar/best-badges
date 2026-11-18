@@ -1,7 +1,8 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import type { MiddlewareHandler } from 'hono';
 import type { RedemptionService, FailureStatus } from '../services/redemptions.ts';
-import { CollectionUnlockSchema, ErrorSchema, PublicSummarySchema, errors, json } from './schemas.ts';
+import { CollectionUnlockSchema, ErrorSchema, PublicSummarySchema, RarityField, errors, json } from './schemas.ts';
+import type { RarityService } from '../services/rarity.ts';
 
 
 const RedeemInputSchema = z.object({
@@ -22,6 +23,7 @@ const RedeemSuccessSchema = z.object({
   nextThreshold: z.number().int().nullable(),
   awardedText: z.string(),
   collections: z.array(CollectionUnlockSchema).openapi({ description: 'Kombinationen, die durch diese Einlösung vorankommen' }),
+  rarity: RarityField,
 }).openapi('RedeemSuccess');
 
 const RedeemFailureSchema = ErrorSchema.extend({ retryAfterSeconds: z.number().int().optional() }).openapi('RedeemFailure');
@@ -42,6 +44,7 @@ const AwardSchema = z.object({
   tierCount: z.number().int(),
   nextThreshold: z.number().int().nullable(),
   requiredCount: z.number().int().nullable().openapi({ description: 'Nur Kombination: benötigte Teile' }),
+  rarity: RarityField,
   firstEarnedAt: z.string().nullable(),
   updatedAt: z.string(),
 }).openapi('Award');
@@ -54,6 +57,7 @@ const STATUS: Record<FailureStatus, 403 | 404 | 409 | 410> = {
 
 export function redemptionRoutes(app: OpenAPIHono, deps: {
   redemptions: RedemptionService;
+  rarity: RarityService;
   auth: { required: MiddlewareHandler; optional: MiddlewareHandler };
   rateLimit: MiddlewareHandler;
 }) {
@@ -73,7 +77,12 @@ export function redemptionRoutes(app: OpenAPIHono, deps: {
     } }),
   async (c) => {
     const result = await deps.redemptions.redeem(c.get('user').sub, c.req.valid('json'));
-    if (result.status === 'success') return c.json(result, 200);
+    if (result.status === 'success') {
+      // Neue Vergabe: Zahlen der Organisation neu laden, damit die eigene Vergabe mitzählt
+      deps.rarity.invalidate(result.achievement.orgId);
+      const [rarity] = await deps.rarity.forAwards([{ achievementId: result.achievement.id, orgId: result.achievement.orgId, tier: result.achievement.secret ? 0 : result.tier }]);
+      return c.json({ ...result, rarity: rarity ?? null }, 200);
+    }
     if (result.retryAfterSeconds) c.header('Retry-After', String(result.retryAfterSeconds));
     return c.json({ error: result.status, message: result.message, ...(result.retryAfterSeconds ? { retryAfterSeconds: result.retryAfterSeconds } : {}) }, STATUS[result.status]);
   });
@@ -87,5 +96,9 @@ export function redemptionRoutes(app: OpenAPIHono, deps: {
   app.openapi(createRoute({ method: 'get', path: '/api/v1/users/me/awards', tags: ['Sammlung'], security, middleware: [deps.auth.required],
     summary: 'Eigene Sammlung mit Fortschritt',
     responses: { 200: json(z.object({ items: z.array(AwardSchema) }), 'Sammlung'), 401: errors[401] } }),
-  async (c) => c.json({ items: await deps.redemptions.awardsFor(c.get('user').sub) }, 200));
+  async (c) => {
+    const items = await deps.redemptions.awardsFor(c.get('user').sub);
+    const rarity = await deps.rarity.forAwards(items.map((i) => ({ achievementId: i.achievement.id, orgId: i.achievement.orgId, tier: i.achievement.secret ? 0 : i.tier })));
+    return c.json({ items: items.map((i, n) => ({ ...i, rarity: rarity[n] ?? null })) }, 200);
+  });
 }

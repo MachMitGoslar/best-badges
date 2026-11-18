@@ -540,6 +540,20 @@
                     "integer",
                     "null"
                   ]
+                },
+                "rarity": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "common",
+                    "rare",
+                    "epic",
+                    "legendary",
+                    null
+                  ],
+                  "description": "Seltenheit der erreichten Stufe aus dem Anteil der Sammelnden der Organisation (common, rare, epic, legendary); null ohne Stufe oder bei Platzhaltern"
                 }
               },
               "required": [
@@ -547,7 +561,8 @@
                 "tier",
                 "tierCount",
                 "progress",
-                "requiredCount"
+                "requiredCount",
+                "rarity"
               ]
             }
           }
@@ -607,6 +622,20 @@
               "$ref": "#/components/schemas/CollectionUnlock"
             },
             "description": "Kombinationen, die durch diese Einlösung vorankommen"
+          },
+          "rarity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "common",
+              "rare",
+              "epic",
+              "legendary",
+              null
+            ],
+            "description": "Seltenheit der erreichten Stufe aus dem Anteil der Sammelnden der Organisation (common, rare, epic, legendary); null ohne Stufe oder bei Platzhaltern"
           }
         },
         "required": [
@@ -621,7 +650,8 @@
           "firstTime",
           "nextThreshold",
           "awardedText",
-          "collections"
+          "collections",
+          "rarity"
         ]
       },
       "CollectionUnlock": {
@@ -797,6 +827,20 @@
             ],
             "description": "Nur Kombination: benötigte Teile"
           },
+          "rarity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "common",
+              "rare",
+              "epic",
+              "legendary",
+              null
+            ],
+            "description": "Seltenheit der erreichten Stufe aus dem Anteil der Sammelnden der Organisation (common, rare, epic, legendary); null ohne Stufe oder bei Platzhaltern"
+          },
           "firstEarnedAt": {
             "type": [
               "string",
@@ -814,6 +858,7 @@
           "tierCount",
           "nextThreshold",
           "requiredCount",
+          "rarity",
           "firstEarnedAt",
           "updatedAt"
         ]

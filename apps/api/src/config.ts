@@ -16,6 +16,8 @@ const schema = z.object({
   // Interne API-Doku (/internal/docs) ausliefern? Standard: nur außerhalb der Produktion
   INTERNAL_DOCS: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
   // Cache-Laufzeiten für HSP-Daten in Sekunden
+  /** Seltenheit erst ab so vielen Sammelnden je Organisation, vorher alles „gewöhnlich“ */
+  RARITY_MIN_COLLECTORS: z.coerce.number().int().min(1).default(50),
   HSP_MEMBERSHIP_TTL: z.coerce.number().int().positive().default(600),
   HSP_ORG_TTL: z.coerce.number().int().positive().default(4 * 3600),
 });

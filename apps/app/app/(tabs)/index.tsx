@@ -52,7 +52,7 @@ export default function Collection() {
           <Section title="Deine Abzeichen">
             {awards.data.map((a) => { const l = look(a.achievement); return (
               <Tile key={a.achievement.id} onPress={() => router.push(`/achievements/${a.achievement.id}`)}>
-                <Badge spec={l.spec} size={104} tier={l.kind === 'tiered' ? Math.max(1, a.tier) : undefined} tierCount={l.kind === 'tiered' ? a.tierCount : undefined} gems={l.kind === 'collection' && a.requiredCount ? { total: a.requiredCount, filled: Math.min(a.progress, a.requiredCount) } : undefined} locked={a.tier === 0} title={l.name} />
+                <Badge spec={l.spec} size={104} tier={l.kind === 'tiered' ? Math.max(1, a.tier) : undefined} tierCount={l.kind === 'tiered' ? a.tierCount : undefined} gems={l.kind === 'collection' && a.requiredCount ? { total: a.requiredCount, filled: Math.min(a.progress, a.requiredCount) } : undefined} locked={a.tier === 0} rarity={a.rarity ?? undefined} title={l.name} />
                 <Text style={s.name} numberOfLines={2}>{l.name}</Text>
                 {l.kind === 'tiered' && (
                   <View style={{ alignSelf: 'stretch', gap: 4 }}>

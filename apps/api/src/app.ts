@@ -26,6 +26,7 @@ import { integrationRoutes } from './routes/integrations.ts';
 import { collectionRoutes } from './routes/collections.ts';
 import { profileRoutes } from './routes/profiles.ts';
 import { ProfileService } from './services/profiles.ts';
+import { RarityService } from './services/rarity.ts';
 import { ApiKeyService } from './services/apiKeys.ts';
 
 /** Höchstgröße einer Anfrage (Bytes) */
@@ -72,6 +73,7 @@ export function createApp({ config, directory, db, authKeys, now = Date.now }: A
   const redemptions = new RedemptionService(db, now);
   const keys = new ApiKeyService(db, now);
   const profiles = new ProfileService(db, config.PUBLIC_BASE_URL, now);
+  const rarity = new RarityService(db, { minCollectors: config.RARITY_MIN_COLLECTORS }, now);
 
   if (config.NODE_ENV !== 'test') {
     const log = logger();
@@ -112,9 +114,9 @@ export function createApp({ config, directory, db, authKeys, now = Date.now }: A
   codeRoutes(app, { codes, auth });
   publicRoutes(app, { achievements, auth });
   collectionRoutes(app, { achievements, auth, directory });
-  profileRoutes(app, { profiles, auth });
+  profileRoutes(app, { profiles, rarity, auth });
   adminRoutes(app, { achievements, auth });
-  redemptionRoutes(app, { redemptions, auth, rateLimit: perUserRateLimit(30, 60_000) });
+  redemptionRoutes(app, { redemptions, rarity, auth, rateLimit: perUserRateLimit(30, 60_000) });
   integrationRoutes(app, { keys, codes, redemptions, auth, keyRateLimit: perUserRateLimit(120, 60_000, (c) => c.get('apiKey')?.id) });
 
   app.openAPIRegistry.registerComponent('securitySchemes', 'bearer', { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' });

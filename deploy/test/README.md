@@ -9,12 +9,13 @@
 - **Anmeldung:** authentik-Anwendung „Best Badges (Test)“, Blueprint `rag_stuffdev/rag_setup/authentik/blueprints/best-badges.yaml`. Zugang nur mit der Gruppe `badges-testers`; der zweite Faktor ist Pflicht. `sub` ist der Benutzername.
 - **Organisationen:** Statt des echten HSP läuft das Test-HSP, nur intern erreichbar. Wer zu welcher Organisation gehört, steht in `/srv/stacks/badges/hsp.json`, geordnet nach Benutzername.
 - **Daten:** Datenbank `best_badges` im vorhandenen `postgres`-Container mit eigenem Benutzer. Das nächtliche `pg_dumpall` sichert sie mit; `backup.sh` sichert zusätzlich den Stack-Ordner.
-- **Speicher:** Die Container haben feste Grenzen: API 256 MB, Verwaltung 160 MB, HSP 96 MB. Der Server hat kaum Reserven, deshalb baut `deploy.sh` die Images auf dem Mac.
+- **Speicher:** Die Container haben feste Grenzen: API 256 MB, Verwaltung 160 MB, HSP 96 MB. Der Server hat kaum Reserven. Deshalb bündelt `deploy.sh` API und Verwaltung auf dem Mac und lädt nur die Bündel hoch, etwa 17 MB. Auf dem Server werden sie nur in Node-Images kopiert (`runtime.Dockerfile`); installiert oder gebaut wird dort nichts.
 - **Absicherung:**
   - Ratenbegrenzung pro IP in Traefik; die API begrenzt außerdem pro Person und pro API-Schlüssel.
   - Anfragen sind auf höchstens 512 KB begrenzt.
   - Container laufen mit `read_only`, ohne Capabilities und ohne Root-Rechte.
   - Die interne API-Doku ist aus, und `X-Robots-Tag: noindex` hält die Seiten aus Suchmaschinen.
+- **Seltenheit:** In der Testumgebung gilt sie schon ab 3 Sammelnden je Organisation (`RARITY_MIN_COLLECTORS=3`), im Normalbetrieb erst ab 50.
 
 ## Einrichten (einmalig)
 

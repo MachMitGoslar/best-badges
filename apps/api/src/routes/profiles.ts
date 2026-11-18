@@ -2,7 +2,8 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import type { MiddlewareHandler } from 'hono';
 import type { ProfileService } from '../services/profiles.ts';
 import { MAX_SHOWCASE } from '../services/profiles.ts';
-import { PublicSummarySchema, errors, json } from './schemas.ts';
+import { PublicSummarySchema, RarityField, errors, json } from './schemas.ts';
+import type { RarityService } from '../services/rarity.ts';
 
 const MyProfileSchema = z.object({
   handle: z.string().nullable(),
@@ -26,11 +27,13 @@ const PublicProfileSchema = z.object({
   showcase: z.array(z.object({
     achievement: PublicSummarySchema,
     tier: z.number().int(), tierCount: z.number().int(), progress: z.number().int(), requiredCount: z.number().int().nullable(),
+    rarity: RarityField,
   })),
 }).openapi('PublicProfile');
 
-export function profileRoutes(app: OpenAPIHono, { profiles, auth }: {
+export function profileRoutes(app: OpenAPIHono, { profiles, rarity, auth }: {
   profiles: ProfileService;
+  rarity: RarityService;
   auth: { required: MiddlewareHandler; optional: MiddlewareHandler };
 }) {
   const security = [{ bearer: [] }];
@@ -50,5 +53,10 @@ export function profileRoutes(app: OpenAPIHono, { profiles, auth }: {
     summary: 'Öffentliches Profil mit Showcase',
     request: { params: z.object({ handle: z.string().min(3).max(30).openapi({ param: { name: 'handle', in: 'path' } }) }) },
     responses: { 200: json(PublicProfileSchema, 'Profil'), 404: errors[404] } }),
-  async (c) => c.json(await profiles.publicProfile(c.req.valid('param').handle, c.get('user')?.sub), 200));
+  async (c) => {
+    const p = await profiles.publicProfile(c.req.valid('param').handle, c.get('user')?.sub);
+    // Platzhalter (verstecktes Abzeichen, das die betrachtende Person nicht hat) bekommen keine Seltenheit
+    const r = await rarity.forAwards(p.showcase.map((s) => ({ achievementId: s.achievement.id, orgId: s.achievement.orgId, tier: s.achievement.secret ? 0 : s.tier })));
+    return c.json({ ...p, showcase: p.showcase.map((s, n) => ({ ...s, rarity: r[n] ?? null })) }, 200);
+  });
 }

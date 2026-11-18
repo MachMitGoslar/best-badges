@@ -45,6 +45,8 @@ describe('Profil und Showcase', () => {
     expect(pub).toMatchObject({ handle: 'gerd-goslar', displayName: 'Gerd', stats: { badges: 2 } });
     expect(pub.showcase.map((s: { achievement: { name?: string; secret: boolean } }) => s.achievement.secret ? 'geheim' : s.achievement.name)).toEqual(['geheim', 'Brunnen']);
     expect(JSON.stringify(pub)).not.toContain('Geheimgang');
+    // Platzhalter verraten auch keine Seltenheit
+    expect(pub.showcase.map((s: { rarity: string | null }) => s.rarity)).toEqual([null, 'common']);
     expect(JSON.stringify(pub)).not.toContain('gerd"'); // kein sub
     // Die Person selbst sieht ihr Geheimnis
     expect((await call('GET', '/api/v1/profiles/gerd-goslar', 'gerd')).body.showcase[0].achievement.name).toBe('Geheimgang');
