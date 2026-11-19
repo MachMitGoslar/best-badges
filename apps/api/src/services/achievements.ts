@@ -5,6 +5,7 @@ import type { Achievement, DB, Tier } from '../db/types.ts';
 import { ApiError, conflict, invalid, notFound } from '../errors.ts';
 import { audit } from './audit.ts';
 import { evaluateCollections } from './collections.ts';
+import type { NotificationService } from './notifications.ts';
 import { earnedIds } from './visibility.ts';
 import { secretRef, type PublicAchievement, type PublicSummary } from './publicViews.ts';
 
@@ -151,7 +152,32 @@ function normalizeTiers(kind: AchievementInput['kind'], tiers: TierInput[] | und
 type Trx = Transaction<DB>;
 
 export class AchievementService {
-  constructor(private db: Database, private now: () => number = Date.now) {}
+  constructor(private db: Database, private now: () => number = Date.now, private notifications?: NotificationService) {}
+
+  /** Neue Anfragen: Mitglieder der Organisationen, deren Teile angefragt werden, benachrichtigen */
+  private async notifyRequests(trx: Trx, collectionId: string, itemIds: string[]) {
+    if (!this.notifications || !itemIds.length) return;
+    const c = await trx.selectFrom('achievements').select(['name']).where('id', '=', collectionId).executeTakeFirstOrThrow();
+    const items = await trx.selectFrom('achievements').select(['org_id', 'name']).where('id', 'in', itemIds).execute();
+    for (const it of items) {
+      await this.notifications.notify(trx, {
+        userSubs: await this.notifications.orgMembers(trx, it.org_id), category: 'requests', link: null,
+        title: 'Neue Sammelanfrage', body: `„${c.name}“ möchte „${it.name}“ aufnehmen. Zustimmen oder ablehnen in der Verwaltung.`,
+      });
+    }
+  }
+
+  /** Rückwirkend geschaffte Kombination (bei Veröffentlichung oder Zustimmung): Sammelnde per Push informieren */
+  private async notifyRetroactive(trx: Trx, collectionId: string, now: Date) {
+    if (!this.notifications) return;
+    const won = await trx.selectFrom('awards').select('user_sub').where('achievement_id', '=', collectionId).where('first_earned_at', '=', now).execute();
+    if (!won.length) return;
+    const c = await trx.selectFrom('achievements').select(['name', 'hidden']).where('id', '=', collectionId).executeTakeFirstOrThrow();
+    await this.notifications.notify(trx, {
+      userSubs: won.map((w) => w.user_sub), category: 'awards', link: `/achievements/${collectionId}`,
+      title: 'Kombination geschafft', body: c.hidden ? 'Du hast ein verstecktes Abzeichen gefunden!' : c.name,
+    });
+  }
 
   private async tiersFor(ids: string[]): Promise<Tier[]> {
     if (ids.length === 0) return [];
@@ -222,6 +248,7 @@ export class AchievementService {
     const existing = await trx.selectFrom('collection_items').selectAll().where('collection_id', '=', collectionId).execute();
     await trx.deleteFrom('collection_items').where('collection_id', '=', collectionId).execute();
     const now = new Date(this.now());
+    const newForeign = items.filter((id) => !existing.some((e) => e.achievement_id === id) && rows.find((r) => r.id === id)!.org_id !== orgId);
     await trx.insertInto('collection_items').values(items.map((id, position) => {
       const prev = existing.find((e) => e.achievement_id === id);
       const own = rows.find((r) => r.id === id)!.org_id === orgId;
@@ -233,6 +260,7 @@ export class AchievementService {
         rejected_by: own ? null : (prev?.rejected_by ?? null),
       };
     })).execute();
+    await this.notifyRequests(trx, collectionId, newForeign);
   }
 
   private async writeTiers(trx: Trx, id: string, tiers: TierInput[]) {
@@ -334,6 +362,7 @@ export class AchievementService {
       const a = await trx.updateTable('achievements').set({ status: 'live', published_at: now, updated_at: now }).where('id', '=', id).returningAll().executeTakeFirstOrThrow();
       // Rückwirkend: Wer die Teile schon hat, bekommt die Kombination sofort
       await evaluateCollections(trx, { collectionId: id }, now);
+      await this.notifyRetroactive(trx, id, now);
       await audit(trx, { actorSub: actor, orgId, action: 'achievement.publish', entity: 'achievement', entityId: id });
       return a;
     });
@@ -396,6 +425,16 @@ export class AchievementService {
       if (decision === 'approve') {
         // Ist die Kombination schon live, zählt das Teil ab sofort – auch rückwirkend
         await evaluateCollections(trx, { collectionId }, now);
+        await this.notifyRetroactive(trx, collectionId, now);
+      }
+      if (this.notifications) {
+        const c = await trx.selectFrom('achievements').select(['org_id', 'name']).where('id', '=', collectionId).executeTakeFirstOrThrow();
+        const it = await trx.selectFrom('achievements').select('name').where('id', '=', achievementId).executeTakeFirstOrThrow();
+        await this.notifications.notify(trx, {
+          userSubs: await this.notifications.orgMembers(trx, c.org_id), category: 'requests', link: null,
+          title: decision === 'approve' ? 'Sammelanfrage angenommen' : 'Sammelanfrage abgelehnt',
+          body: `„${it.name}“ für „${c.name}“`,
+        });
       }
       await audit(trx, { actorSub: actor, orgId, action: `collection_item.${decision}`, entity: 'achievement', entityId: collectionId, data: { achievementId } });
     });

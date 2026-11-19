@@ -20,6 +20,8 @@ export interface AuthOptions {
   audience: string;
   adminOrgId: string;
   directory: OrgDirectory;
+  /** Nach erfolgreicher Anmeldung (z. B. Mitgliedschaften merken); Fehler darin brechen nichts ab. */
+  onUser?: (u: AuthUser) => Promise<void> | void;
   /** Für Tests austauschbar; standardmäßig JWKS aus der OIDC-Discovery. */
   keys?: JWTVerifyGetKey;
 }
@@ -68,7 +70,9 @@ export function createAuth(opts: AuthOptions) {
     const token = bearer(c);
     if (!token) return unauthorized(c, 'Bearer-Token fehlt');
     try {
-      c.set('user', await resolve(token));
+      const u = await resolve(token);
+      c.set('user', u);
+      if (opts.onUser) void Promise.resolve().then(() => opts.onUser!(u)).catch((e) => console.warn('onUser:', (e as Error).message));
     } catch (err) {
       console.warn('Auth fehlgeschlagen:', (err as Error).message);
       return unauthorized(c, 'Token ungültig oder abgelaufen');

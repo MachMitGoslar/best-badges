@@ -139,6 +139,72 @@ export interface AuditLogTable {
   created_at: CreatedAt;
 }
 
+export type NotificationCategory = 'awards' | 'requests' | 'news' | 'campaigns' | 'reminders';
+
+export interface NotificationPrefsTable {
+  user_sub: string;
+  awards: Generated<boolean>;
+  requests: Generated<boolean>;
+  news: Generated<boolean>;
+  campaigns: Generated<boolean>;
+  reminders: Generated<boolean>;
+  consent_at: NullableTimestamp;
+  last_active_at: NullableTimestamp;
+  last_reminder_at: NullableTimestamp;
+  updated_at: UpdatedAt;
+}
+
+export interface PushDevicesTable {
+  id: Generated<string>;
+  user_sub: string;
+  token: string;
+  environment: 'development' | 'production';
+  created_at: CreatedAt;
+  last_seen_at: UpdatedAt;
+  disabled_at: NullableTimestamp;
+}
+
+export interface BroadcastsTable {
+  id: Generated<string>;
+  category: 'news' | 'campaigns';
+  title: string;
+  body: string;
+  link: string | null;
+  recipients: Generated<number>;
+  created_by: string;
+  created_at: CreatedAt;
+}
+
+export interface NotificationsTable {
+  id: Generated<string>;
+  user_sub: string;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+  link: string | null;
+  broadcast_id: string | null;
+  created_at: CreatedAt;
+  read_at: NullableTimestamp;
+}
+
+export interface PushOutboxTable {
+  id: Generated<string>;
+  notification_id: string;
+  device_id: string;
+  status: Generated<'pending' | 'sent' | 'failed'>;
+  attempts: Generated<number>;
+  next_attempt_at: UpdatedAt;
+  last_error: string | null;
+  created_at: CreatedAt;
+  sent_at: NullableTimestamp;
+}
+
+export interface OrgMembersSeenTable {
+  org_id: string;
+  user_sub: string;
+  last_seen_at: UpdatedAt;
+}
+
 export interface DB {
   achievements: AchievementsTable;
   achievement_tiers: AchievementTiersTable;
@@ -150,6 +216,12 @@ export interface DB {
   code_nonces: CodeNoncesTable;
   api_keys: ApiKeysTable;
   audit_log: AuditLogTable;
+  notification_prefs: NotificationPrefsTable;
+  push_devices: PushDevicesTable;
+  broadcasts: BroadcastsTable;
+  notifications: NotificationsTable;
+  push_outbox: PushOutboxTable;
+  org_members_seen: OrgMembersSeenTable;
 }
 
 export type Achievement = Selectable<AchievementsTable>;

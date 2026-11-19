@@ -6,6 +6,7 @@ import { parseScanned, verifyCheckout, verifyEvent } from './signing.ts';
 import { ApiError, conflict, notFound } from '../errors.ts';
 import type { ApiKeyPrincipal } from './apiKeys.ts';
 import { evaluateCollections, type CollectionProgress } from './collections.ts';
+import type { NotificationService } from './notifications.ts';
 import { publicSummary, type PublicSummary, type PublicSummaryFull } from './publicViews.ts';
 
 export interface GeoInput { lat: number; lng: number; accuracyM?: number }
@@ -94,7 +95,7 @@ type Resolved =
   | { ok: false; status: FailureStatus; code: Code | null; achievement: Achievement | null };
 
 export class RedemptionService {
-  constructor(private db: Database, private now: () => number = Date.now) {}
+  constructor(private db: Database, private now: () => number = Date.now, private notifications?: NotificationService) {}
 
   /** Findet und prüft einen gescannten Code: Signatur, Aktivität, Zeitfenster, Sichtbarkeit. */
   private async resolve(db: Database | Transaction<DB>, scanned: string, lock: boolean): Promise<Resolved> {
@@ -169,7 +170,8 @@ export class RedemptionService {
       }
 
       await trx.updateTable('codes').set({ uses: sql`uses + 1` }).where('id', '=', code.id).execute();
-      const result = await this.applyProgress(trx, achievement, userSub, value);
+      // Selbst gescannt: Die Person sieht den Erfolg gerade auf dem Bildschirm – nur ins Postfach, kein Push
+      const result = await this.applyProgress(trx, achievement, userSub, value, false);
       // Zeitstempel aus derselben Uhr wie die Prüfung der Wartezeit
       await trx.insertInto('redemptions').values({ code_id: code.id, achievement_id: achievement.id, user_sub: userSub, value, status: 'success', created_at: new Date(now) }).execute();
       return result;
@@ -177,13 +179,13 @@ export class RedemptionService {
   }
 
   /** Fortschritt atomar erhöhen und Stufe neu berechnen. Wird auch für die Direktvergabe genutzt. */
-  async applyProgress(trx: Transaction<DB>, achievement: Achievement, userSub: string, value: number): Promise<RedeemSuccess> {
+  async applyProgress(trx: Transaction<DB>, achievement: Achievement, userSub: string, value: number, push = false): Promise<RedeemSuccess> {
     const now = new Date(this.now());
     const award = await trx.insertInto('awards')
       .values({ achievement_id: achievement.id, user_sub: userSub, progress: value, tier: 0, first_earned_at: null, updated_at: now })
       .onConflict((oc) => oc.columns(['achievement_id', 'user_sub']).doUpdateSet({ progress: sql`awards.progress + ${value}`, updated_at: now }))
       .returningAll().executeTakeFirstOrThrow();
-    const tiers = await trx.selectFrom('achievement_tiers').select(['level', 'threshold', 'awarded_text']).where('achievement_id', '=', achievement.id).execute();
+    const tiers = await trx.selectFrom('achievement_tiers').select(['level', 'threshold', 'awarded_text', 'name']).where('achievement_id', '=', achievement.id).execute();
     const { tier, tierCount, nextThreshold } = tierFor(tiers, award.progress);
     const previousTier = award.tier;
     const firstTime = award.first_earned_at === null && tier >= 1;
@@ -196,6 +198,19 @@ export class RedemptionService {
     // Erstes Verdienen eines Teils bringt Kombinationen voran
     const collections = firstTime ? (await evaluateCollections(trx, { userSub, itemId: achievement.id }, now)).map(unlockView) : [];
     const earned = tier >= 1;
+    if (this.notifications && (firstTime || tier > previousTier)) {
+      const tierName = tiers.find((t) => t.level === tier)?.name;
+      await this.notifications.notify(trx, {
+        userSubs: [userSub], category: 'awards', push, link: `/achievements/${achievement.id}`,
+        title: firstTime ? 'Neues Abzeichen' : `Stufe ${tier} erreicht`,
+        body: `${achievement.name}${!firstTime && tierName ? ` · ${tierName}` : ''}`,
+      });
+    }
+    if (this.notifications) {
+      for (const c of collections.filter((x) => x.completed && x.firstTime && !x.achievement.secret)) {
+        await this.notifications.notify(trx, { userSubs: [userSub], category: 'awards', push, link: `/achievements/${c.achievement.id}`, title: 'Kombination geschafft', body: 'name' in c.achievement ? c.achievement.name : 'Kombination' });
+      }
+    }
     return {
       status: 'success',
       achievement: summary(achievement, earned),
@@ -295,7 +310,8 @@ export class RedemptionService {
         }
       }
 
-      const result = await this.applyProgress(trx, achievement, input.userSub, value);
+      // Von außen vergeben (z. B. Kasse): Die Person bekommt es per Push mit
+      const result = await this.applyProgress(trx, achievement, input.userSub, value, true);
       await trx.insertInto('redemptions').values({
         code_id: null, achievement_id: achievement.id, user_sub: input.userSub, value, status: 'success', source: 'api',
         api_key_id: key.id, reference: input.reference ?? null, created_at: new Date(this.now()),

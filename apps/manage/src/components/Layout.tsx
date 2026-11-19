@@ -26,6 +26,7 @@ export function Layout() {
       <header className="topbar">
         <Link to="/" className="brand"><Logo /> <span>Best Badges</span> <span className="muted small brand-sub">Verwaltung</span></Link>
         <div className="spacer" />
+        {me.data?.isPlatformAdmin && <Link to="/admin/broadcasts" className="btn btn-sm btn-ghost"><Icon name="inbox" size={16} /> Rundschreiben</Link>}
         {me.data?.isPlatformAdmin && <span className="pill">Haupt-Admin</span>}
         <span className="muted small user-name">{session.data?.name ?? me.data?.name ?? session.data?.sub}</span>
         <button className="btn btn-sm btn-ghost" onClick={() => void logout()}><Icon name="logout" size={16} /> Abmelden</button>

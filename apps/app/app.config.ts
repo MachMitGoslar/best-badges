@@ -1,5 +1,9 @@
 import type { ExpoConfig } from 'expo/config';
 
+// APNs-Umgebung des Builds: Entwicklungs-Signatur (Xcode, Gerät per Kabel) = development,
+// TestFlight/App Store = production. Muss zum Eintrag aps-environment passen; die App meldet sie mit dem Token.
+const apnsEnvironment = process.env.EXPO_PUBLIC_APNS_ENV === 'production' ? 'production' : 'development';
+
 const config: ExpoConfig = {
   name: 'Best Badges',
   slug: 'best-badges',
@@ -24,6 +28,8 @@ const config: ExpoConfig = {
     'expo-web-browser',
     ['expo-camera', { cameraPermission: 'Best Badges braucht die Kamera, um QR-Codes von Abzeichen zu scannen.' }],
     './plugins/withMetroIpOutput',
+    // Nur Erlaubnis, Geräte-Token und Antippen – Versand direkt über Apple (APNs), nicht über Expo
+    ['expo-notifications', { mode: apnsEnvironment, enableBackgroundRemoteNotifications: false }],
   ],
   experiments: { typedRoutes: false },
 };

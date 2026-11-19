@@ -41,3 +41,18 @@ Release-Builds nutzen `apps/app/.env.production` und sprechen damit mit der Test
 ```bash
 cd apps/app && LANG=en_US.UTF-8 corepack pnpm exec expo run:ios --device --configuration Release
 ```
+
+## Push einrichten (Apple)
+
+Ohne Schlüssel läuft alles außer Push: Mitteilungen landen im Postfach der App.
+
+1. **Schlüssel (stuff):** Im Apple-Entwicklerkonto (bezahltes Konto) unter Certificates, Identifiers & Profiles → Keys einen neuen Schlüssel mit „Apple Push Notifications service (APNs)“ anlegen. Die `.p8`-Datei lässt sich nur **einmal** herunterladen; die Key ID (10 Zeichen) notieren und beides im Passwortmanager ablegen.
+2. **Auf den Server (stuff):** Die Datei als `/srv/stacks/badges/secrets/apns.p8` ablegen, Rechte `600`. Danach in `.env` die vier `APNS_*`-Zeilen aus `env.example` eintragen.
+3. **Neu starten:** `cd /srv/stacks/badges && docker compose up -d`. Im Log muss „Push an (APNs …)“ stehen.
+4. **App:** Neu bauen, weil `expo-notifications` ein natives Modul ist. Builds mit Entwicklungs-Signatur (Xcode, Gerät per Kabel) nutzen die APNs-Sandbox (`development`). Für TestFlight gilt `EXPO_PUBLIC_APNS_ENV=production`.
+
+**So läuft es ab:**
+- Neue Abzeichen und Sammelanfragen sind an; Neuigkeiten, Sonderaktionen und Erinnerungen nur nach Einwilligung in der App. Die Einwilligung wird mit Zeitpunkt gespeichert.
+- Werbliches kommt nur zwischen 9 und 20 Uhr an. Erinnerungen gibt es frühestens nach 14 Tagen ohne Besuch, zwischen 17 und 19 Uhr.
+- Rundschreiben schickt die Haupt-Admin-Organisation in der Verwaltung unter „Rundschreiben“, höchstens 3 in 24 Stunden.
+- Der Versand läuft über die Warteschlange `push_outbox` mit Wiederholungen. Tokens, die Apple ablehnt, werden deaktiviert.

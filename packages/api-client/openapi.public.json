@@ -574,6 +574,135 @@
           "showcase"
         ]
       },
+      "Notification": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "awards",
+              "requests",
+              "news",
+              "campaigns",
+              "reminders"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "link": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "read": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "title",
+          "body",
+          "link",
+          "createdAt",
+          "read"
+        ]
+      },
+      "NotificationSettings": {
+        "type": "object",
+        "properties": {
+          "prefs": {
+            "$ref": "#/components/schemas/NotificationPrefs"
+          },
+          "consentAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Zeitpunkt der letzten Änderung der Einwilligungen"
+          },
+          "pushDevices": {
+            "type": "integer",
+            "description": "Geräte dieser Person mit Push"
+          },
+          "pushAvailable": {
+            "type": "boolean",
+            "description": "Ist Push auf dem Server eingerichtet?"
+          }
+        },
+        "required": [
+          "prefs",
+          "consentAt",
+          "pushDevices",
+          "pushAvailable"
+        ]
+      },
+      "NotificationPrefs": {
+        "type": "object",
+        "properties": {
+          "awards": {
+            "type": "boolean",
+            "description": "Neue Stufe, neues Abzeichen, Kombination geschafft"
+          },
+          "requests": {
+            "type": "boolean",
+            "description": "Sammelanfragen (für Mitglieder von Organisationen)"
+          },
+          "news": {
+            "type": "boolean",
+            "description": "Neuigkeiten der Plattform (werblich, nur mit Einwilligung)"
+          },
+          "campaigns": {
+            "type": "boolean",
+            "description": "Sonderaktionen (werblich, nur mit Einwilligung)"
+          },
+          "reminders": {
+            "type": "boolean",
+            "description": "„Schau mal wieder rein“ nach 14 Tagen ohne Besuch"
+          }
+        },
+        "required": [
+          "awards",
+          "requests",
+          "news",
+          "campaigns",
+          "reminders"
+        ]
+      },
+      "PushDeviceInput": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64,200}$",
+            "description": "APNs-Geräte-Token (hex)"
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "development",
+              "production"
+            ],
+            "description": "APNs-Umgebung des App-Builds"
+          }
+        },
+        "required": [
+          "token",
+          "environment"
+        ]
+      },
       "RedeemSuccess": {
         "type": "object",
         "properties": {
@@ -1264,6 +1393,408 @@
           },
           "404": {
             "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/notifications": {
+      "get": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Postfach (neueste zuerst) und Zahl der ungelesenen",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "before",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Postfach",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Notification"
+                      }
+                    },
+                    "unread": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "unread"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ungültige Eingabe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/notifications/read": {
+      "post": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Als gelesen markieren (einzelne oder alle)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 100
+                  },
+                  "all": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ungelesene danach",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "unread": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "unread"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ungültige Eingabe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/notification-settings": {
+      "get": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Einstellungen und Einwilligungen",
+        "responses": {
+          "200": {
+            "description": "Einstellungen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Einstellungen ändern (werbliche Kategorien = Einwilligung)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "awards": {
+                    "type": "boolean",
+                    "description": "Neue Stufe, neues Abzeichen, Kombination geschafft"
+                  },
+                  "requests": {
+                    "type": "boolean",
+                    "description": "Sammelanfragen (für Mitglieder von Organisationen)"
+                  },
+                  "news": {
+                    "type": "boolean",
+                    "description": "Neuigkeiten der Plattform (werblich, nur mit Einwilligung)"
+                  },
+                  "campaigns": {
+                    "type": "boolean",
+                    "description": "Sonderaktionen (werblich, nur mit Einwilligung)"
+                  },
+                  "reminders": {
+                    "type": "boolean",
+                    "description": "„Schau mal wieder rein“ nach 14 Tagen ohne Besuch"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Gespeichert",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ungültige Eingabe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/push-devices": {
+      "post": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Gerät für Push anmelden (nach Erlaubnis im Betriebssystem)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushDeviceInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ungültige Eingabe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/push-devices/{token}": {
+      "delete": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Gerät abmelden (z. B. beim Abmelden aus der App)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64,200}$",
+              "description": "APNs-Geräte-Token (hex)"
+            },
+            "required": true,
+            "description": "APNs-Geräte-Token (hex)",
+            "name": "token",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Abgemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ungültige Eingabe",
             "content": {
               "application/json": {
                 "schema": {

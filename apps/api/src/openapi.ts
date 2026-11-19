@@ -3,7 +3,7 @@
 // Die Trennung macht die Schnittstelle für externe Entwicklerinnen klar und zeigt nicht mehr als nötig.
 
 /** Bereiche der öffentlichen Doku. Alles andere ist intern. */
-export const PUBLIC_TAGS = new Set(['Öffentlich', 'Sammlung', 'Einlösen', 'Profil', 'Integrationen']);
+export const PUBLIC_TAGS = new Set(['Öffentlich', 'Sammlung', 'Einlösen', 'Profil', 'Benachrichtigungen', 'Integrationen']);
 
 type Doc = { paths?: Record<string, Record<string, { tags?: string[] }>>; components?: { schemas?: Record<string, unknown> } & Record<string, unknown>; tags?: { name: string }[] };
 

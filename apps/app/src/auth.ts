@@ -79,8 +79,21 @@ export async function signIn(): Promise<boolean> {
   return true;
 }
 
+const beforeSignOut: (() => Promise<void>)[] = [];
+/** Aufräumen, solange die Anmeldung noch gilt (z. B. Push-Gerät abmelden) */
+export const onBeforeSignOut = (fn: () => Promise<void>) => { beforeSignOut.push(fn); };
+let signingOut = false;
+
 /** Abmelden: Refresh-Token beim Anbieter widerrufen (wenn möglich), dann lokal löschen. */
 export async function signOut() {
+  // Aufräum-Schritte können selbst 401 bekommen und erneut abmelden wollen
+  if (signingOut || !state.tokens) return;
+  signingOut = true;
+  try {
+    for (const fn of beforeSignOut) await fn().catch(() => {});
+  } finally {
+    signingOut = false;
+  }
   const refresh = state.tokens?.refreshToken;
   await save(null);
   if (!refresh) return;

@@ -3,6 +3,7 @@ import { generateKeyPair, SignJWT, createLocalJWKSet, exportJWK, type JWTVerifyG
 import { sql } from 'kysely';
 import pg from 'pg';
 import { createApp } from '../app.ts';
+import type { NotificationService } from '../services/notifications.ts';
 import type { Config } from '../config.ts';
 import { createDb, type Database } from '../db/index.ts';
 import { migrate } from '../db/migrate.ts';
@@ -72,9 +73,9 @@ export async function freshDatabase(): Promise<Database> {
   return db;
 }
 
-export async function testApp(db: Database, opts: { now?: () => number } = {}) {
+export async function testApp(db: Database, opts: { now?: () => number; notifications?: NotificationService } = {}) {
   const { keys } = await keyPair();
-  const app = createApp({ config: testConfig(), directory, db, authKeys: keys, now: opts.now });
+  const app = createApp({ config: testConfig(), directory, db, authKeys: keys, now: opts.now, notifications: opts.notifications });
   /** Kleiner Client: call('POST', '/pfad', 'waldpfad', body) */
   const call = async (method: string, path: string, user?: string, body?: unknown) => {
     const headers: Record<string, string> = {};

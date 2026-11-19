@@ -43,7 +43,7 @@ ssh_ "test -f $DIR/hsp.json" || scp_ deploy/test/hsp.json "$SSH_HOST:$DIR/hsp.js
 
 echo "== Starten"
 # Tag in .env festhalten, damit ein späteres 'docker compose up' denselben Stand nimmt
-ssh_ "set -e; cd $DIR; chmod 600 .env; sed -i '/^BADGES_TAG=/d' .env; echo BADGES_TAG=$TAG >> .env
+ssh_ "set -e; cd $DIR; chmod 600 .env; mkdir -p secrets; chmod 700 secrets; sed -i '/^BADGES_TAG=/d' .env; echo BADGES_TAG=$TAG >> .env
       docker compose up -d --remove-orphans --wait --wait-timeout 120
       docker compose ps
       # Alte Stände der drei Images aufräumen (laufende bleiben)

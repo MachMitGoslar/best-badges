@@ -102,6 +102,7 @@ export default function Profile() {
             <Button title="Öffentliches Profil ansehen" kind="secondary" icon="eye" onPress={() => router.push(`/u/${profile.data!.handle}`)} />
           </View>
         )}
+        <Button title="Benachrichtigungen" icon="bell" kind="secondary" onPress={() => router.push('/settings/notifications')} />
         <Button title="Abmelden" icon="log-out" kind="secondary" onPress={() => void signOut()} />
       </ScrollView>
     </Screen>

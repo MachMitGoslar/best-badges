@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+/** Leere Werte (z. B. VAR= in .env) gelten als nicht gesetzt */
+const optionalText = <T extends z.ZodTypeAny>(t: T) => z.preprocess((v) => (v === '' ? undefined : v), t.optional());
+
 const schema = z.object({
   PORT: z.coerce.number().int().default(3001),
   /** Lauschadresse: lokal nur 127.0.0.1, im Container 0.0.0.0 (Zugang regelt dann Docker/Traefik) */
@@ -18,6 +21,12 @@ const schema = z.object({
   // Cache-Laufzeiten für HSP-Daten in Sekunden
   /** Seltenheit erst ab so vielen Sammelnden je Organisation, vorher alles „gewöhnlich“ */
   RARITY_MIN_COLLECTORS: z.coerce.number().int().min(1).default(50),
+  /** Push über Apple: alle vier gesetzt = an. Der Schlüssel (.p8) liegt als Datei vor, nie in Umgebungsvariablen. */
+  APNS_KEY_FILE: optionalText(z.string()),
+  APNS_KEY_ID: optionalText(z.string().regex(/^[A-Z0-9]{10}$/)),
+  APNS_TEAM_ID: optionalText(z.string().regex(/^[A-Z0-9]{10}$/)),
+  /** Bundle-ID der App */
+  APNS_TOPIC: optionalText(z.string().regex(/^[A-Za-z0-9.-]+$/)),
   HSP_MEMBERSHIP_TTL: z.coerce.number().int().positive().default(600),
   HSP_ORG_TTL: z.coerce.number().int().positive().default(4 * 3600),
 });

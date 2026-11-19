@@ -27,6 +27,8 @@ import { collectionRoutes } from './routes/collections.ts';
 import { profileRoutes } from './routes/profiles.ts';
 import { ProfileService } from './services/profiles.ts';
 import { RarityService } from './services/rarity.ts';
+import { NotificationService } from './services/notifications.ts';
+import { notificationRoutes } from './routes/notifications.ts';
 import { ApiKeyService } from './services/apiKeys.ts';
 
 /** Höchstgröße einer Anfrage (Bytes) */
@@ -48,11 +50,13 @@ export interface AppDeps {
   authKeys?: JWTVerifyGetKey;
   /** Für Tests: feste Uhr */
   now?: () => number;
+  /** Gemeinsam mit dem Push-Worker (index.ts); sonst eigene Instanz */
+  notifications?: NotificationService;
 }
 
 const zodIssues = (err: ZodError) => err.issues.map((i) => ({ path: i.path.join('.'), message: i.message }));
 
-export function createApp({ config, directory, db, authKeys, now = Date.now }: AppDeps) {
+export function createApp({ config, directory, db, authKeys, now = Date.now, notifications = new NotificationService(db, { pushEnabled: false }, now) }: AppDeps) {
   const app = new OpenAPIHono({
     // Validierungsfehler einheitlich als 422 mit Liste der Probleme
     defaultHook: (result, c) => {
@@ -67,10 +71,11 @@ export function createApp({ config, directory, db, authKeys, now = Date.now }: A
     adminOrgId: config.ADMIN_ORG_ID,
     directory,
     keys: authKeys,
+    onUser: (u) => notifications.trackMembership(u.sub, u.organisationIds),
   });
-  const achievements = new AchievementService(db, now);
+  const achievements = new AchievementService(db, now, notifications);
   const codes = new CodeService(db, achievements, config.PUBLIC_BASE_URL, now);
-  const redemptions = new RedemptionService(db, now);
+  const redemptions = new RedemptionService(db, now, notifications);
   const keys = new ApiKeyService(db, now);
   const profiles = new ProfileService(db, config.PUBLIC_BASE_URL, now);
   const rarity = new RarityService(db, { minCollectors: config.RARITY_MIN_COLLECTORS }, now);
@@ -115,6 +120,7 @@ export function createApp({ config, directory, db, authKeys, now = Date.now }: A
   publicRoutes(app, { achievements, auth });
   collectionRoutes(app, { achievements, auth, directory });
   profileRoutes(app, { profiles, rarity, auth });
+  notificationRoutes(app, { notifications, auth });
   adminRoutes(app, { achievements, auth });
   redemptionRoutes(app, { redemptions, rarity, auth, rateLimit: perUserRateLimit(30, 60_000) });
   integrationRoutes(app, { keys, codes, redemptions, auth, keyRateLimit: perUserRateLimit(120, 60_000, (c) => c.get('apiKey')?.id) });

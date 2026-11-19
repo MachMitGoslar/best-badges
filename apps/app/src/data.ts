@@ -35,3 +35,25 @@ export const saveProfile = (body: ProfileInput) => unwrap(api.PUT('/api/v1/users
 
 export const usePublicProfile = (handle: string) =>
   useQuery({ queryKey: ['profile', handle], queryFn: () => unwrap(api.GET('/api/v1/profiles/{handle}', { params: { path: { handle } } })) });
+
+// ── Benachrichtigungen ────────────────────────────────────────────────────
+export type NotificationItem = components['schemas']['Notification'];
+export type NotificationPrefs = components['schemas']['NotificationPrefs'];
+
+export const useNotifications = () => {
+  const auth = useAuth();
+  return useQuery({
+    queryKey: ['notifications'],
+    enabled: auth.status === 'signedIn',
+    // Neues auch ohne Push sichtbar machen, solange die App offen ist
+    refetchInterval: 60_000,
+    queryFn: () => unwrap(api.GET('/api/v1/users/me/notifications', { params: { query: { limit: 50 } } })),
+  });
+};
+export const markNotificationsRead = (body: { ids?: string[]; all?: boolean }) => unwrap(api.POST('/api/v1/users/me/notifications/read', { body }));
+
+export const useNotificationSettings = () => {
+  const auth = useAuth();
+  return useQuery({ queryKey: ['notification-settings'], enabled: auth.status === 'signedIn', queryFn: () => unwrap(api.GET('/api/v1/users/me/notification-settings')) });
+};
+export const saveNotificationSettings = (body: Partial<NotificationPrefs>) => unwrap(api.PUT('/api/v1/users/me/notification-settings', { body }));

@@ -1,0 +1,77 @@
+# Testumgebung Best Badges auf stuffdev – Ordner /srv/stacks/badges (Compose-Projekt best-badges).
+# Images baut deploy.sh auf dem Mac und lädt sie hoch (der Server hat zu wenig freien Speicher zum Bauen).
+# Geheimnisse in ./.env (trägt stuff ein).
+#
+# Öffentlich:  https://badges.machmit.goslar.de      Verwaltung (BFF + Oberfläche)
+#              https://badges-api.machmit.goslar.de  API für die App, öffentliche Doku unter /docs
+# Anmeldung:   Goslar-ID (https://backend.goslar-id.ceconsoft.de)
+
+name: best-badges
+
+x-common: &common
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: [/tmp]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+
+  postgres:
+    <<: *common
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_DB: badges
+      POSTGRES_USER: badges
+      POSTGRES_PASSWORD: badges-dev
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U badges -d badges"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    <<: *common
+    image: best-badges-api:${BADGES_TAG:-latest}
+    mem_limit: 256m
+    container_name: best-badges-api
+    networks: [rag, internal]
+    environment:
+      - DATABASE_URL=postgres://best_badges:${BADGES_DB_PASSWORD:?BADGES_DB_PASSWORD fehlt}@postgres:5432/best_badges
+      - OIDC_ISSUER=https://auth.stuffdev.de/application/o/best-badges/
+      - OIDC_AUDIENCE=best-badges
+      - HSP_BASE_URL=http://mock-hsp:4010/api
+      - ADMIN_ORG_ID=00000000-0000-4000-8000-000000000001
+      - PUBLIC_BASE_URL=https://badges-api.stuffdev.de
+      # Die App ruft nativ auf (kein CORS nötig), die Verwaltung über ihren eigenen Server
+      - CORS_ORIGINS=
+      - INTERNAL_DOCS=false
+      # Seltenheit schon ab 3 Sammelnden je Organisation (Standard 50), damit sie mit wenigen Testpersonen sichtbar wird
+      - RARITY_MIN_COLLECTORS=3
+      - TZ=Europe/Berlin
+    depends_on:
+      mock-hsp: { condition: service_started }
+  
+  manage:
+    <<: *common
+    image: best-badges-manage:${BADGES_TAG:-latest}
+    mem_limit: 160m
+    container_name: best-badges-manage
+    networks: [rag, internal]
+    environment:
+      - MANAGE_PUBLIC_URL=https://badges.stuffdev.de
+      - OIDC_ISSUER=https://auth.stuffdev.de/application/o/best-badges/
+      - OIDC_AUDIENCE=best-badges
+      - MANAGE_OIDC_CLIENT_ID=best-badges
+      - API_URL=http://api:3001
+      - TZ=Europe/Berlin
+    depends_on:
+      api: { condition: service_healthy }
+

@@ -10,6 +10,7 @@ import { CheckoutPage } from './pages/CheckoutPage.tsx';
 import { PrintPage } from './pages/PrintPage.tsx';
 import { NotFound } from './pages/NotFound.tsx';
 import { ApiKeysPage } from './pages/ApiKeysPage.tsx';
+import { BroadcastsPage } from './pages/BroadcastsPage.tsx';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
           { path: '/orgs/:orgId/achievements/:id/codes', element: <CodesPage /> },
           { path: '/orgs/:orgId/achievements/:id/print', element: <PrintPage /> },
           { path: '/orgs/:orgId/api-keys', element: <ApiKeysPage /> },
+          { path: '/admin/broadcasts', element: <BroadcastsPage /> },
           { path: '*', element: <NotFound /> },
         ],
       },

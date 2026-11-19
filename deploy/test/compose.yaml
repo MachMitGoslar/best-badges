@@ -37,7 +37,14 @@ services:
       - INTERNAL_DOCS=false
       # Seltenheit schon ab 3 Sammelnden je Organisation (Standard 50), damit sie mit wenigen Testpersonen sichtbar wird
       - RARITY_MIN_COLLECTORS=3
+      # Push über Apple: Schlüssel als Datei in ./secrets (nur lesbar), Kennungen in .env. Leer = Push aus.
+      - APNS_KEY_FILE=${APNS_KEY_FILE:-}
+      - APNS_KEY_ID=${APNS_KEY_ID:-}
+      - APNS_TEAM_ID=${APNS_TEAM_ID:-}
+      - APNS_TOPIC=${APNS_TOPIC:-}
       - TZ=Europe/Berlin
+    volumes:
+      - ./secrets:/run/badges-secrets:ro
     depends_on:
       mock-hsp: { condition: service_started }
     labels:
