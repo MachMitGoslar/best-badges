@@ -41,6 +41,7 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Sammlung', tabBarIcon: ({ color, size }) => <Feather name="award" color={String(color)} size={size} /> }} />
+      <Tabs.Screen name="map" options={{ title: 'Orte', tabBarIcon: ({ color, size }) => <Feather name="map" color={String(color)} size={size} /> }} />
       <Tabs.Screen name="scan" options={{ title: 'Scannen', tabBarIcon: ({ color, size }) => <Feather name="maximize" color={String(color)} size={size} /> }} />
       <Tabs.Screen name="profile" options={{ title: 'Profil', tabBarIcon: ({ color, size }) => <Feather name="user" color={String(color)} size={size} /> }} />
     </Tabs>

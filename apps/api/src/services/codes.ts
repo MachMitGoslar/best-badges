@@ -5,6 +5,7 @@ import { invalid, notFound } from '../errors.ts';
 import type { AchievementService } from './achievements.ts';
 import { audit } from './audit.ts';
 import { checkoutUrl, eventUrl } from './signing.ts';
+import { scheduleError, type Schedule } from './schedule.ts';
 import { randomSecret, randomToken } from './tokens.ts';
 
 export interface CodeInput {
@@ -18,6 +19,10 @@ export interface CodeInput {
   validFrom?: string | null;
   validUntil?: string | null;
   geo?: { lat: number; lng: number; radiusM: number } | null;
+  /** Nur Vorlage `place`: öffentlicher Name des Ortes */
+  placeName?: string | null;
+  /** Feste Zeiten (Wochentage + Uhrzeit); null = immer */
+  schedule?: Schedule | null;
   /** Nur für Gutschein-Stapel: Anzahl einmaliger Codes */
   count?: number;
 }
@@ -27,6 +32,10 @@ export interface CodePatch {
   active?: boolean;
   validUntil?: string | null;
   maxTotal?: number | null;
+  /** Nur Ort: verschieben und umbenennen */
+  geo?: { lat: number; lng: number; radiusM: number };
+  placeName?: string;
+  schedule?: Schedule | null;
 }
 
 export interface CodeView {
@@ -45,6 +54,8 @@ export interface CodeView {
   validUntil: string | null;
   active: boolean;
   geo: { lat: number; lng: number; radiusM: number } | null;
+  placeName: string | null;
+  schedule: Schedule | null;
   batchId: string | null;
   createdAt: string;
 }
@@ -53,7 +64,7 @@ export interface CodeView {
  * Vorlagen setzen die drei Stellschrauben vor.
  * `fixed` sind Werte, die die Vorlage erzwingt (Sicherheitsregeln), `defaults` lassen sich überschreiben.
  */
-const TEMPLATES: Record<CodeTemplate, { defaults: Partial<CodeInput>; fixed: Partial<CodeInput>; dynamic: boolean }> = {
+const TEMPLATES: Record<CodeTemplate, { defaults: Partial<CodeInput>; fixed: Partial<CodeInput>; dynamic: boolean; link?: false }> = {
   // Gedruckter, statischer QR-Code. Wert immer 1, damit ein abfotografierter Code wenig hergibt.
   station: { defaults: { perUserLimit: 1 }, fixed: { value: 1 }, dynamic: false },
   // Rotierender Code im Ausgabe-Modus, signiert mit `secret`.
@@ -62,9 +73,23 @@ const TEMPLATES: Record<CodeTemplate, { defaults: Partial<CodeInput>; fixed: Par
   checkout: { defaults: { perUserLimit: null }, fixed: {}, dynamic: true },
   // Gutschein-Stapel: jeder Code genau einmal einlösbar.
   voucher: { defaults: {}, fixed: { perUserLimit: 1, maxTotal: 1 }, dynamic: false },
+  // Ort: Einchecken nur über den Standort. Kein Link – das Token bleibt intern, eingecheckt wird über die ID.
+  place: { defaults: { perUserLimit: 1 }, fixed: { value: 1 }, dynamic: false, link: false },
 };
 
+/** Ort: Radius passend zur GPS-Genauigkeit von Handys */
+export const PLACE_RADIUS = { min: 30, max: 2000 } as const;
+
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
+
+function checkSchedule(schedule: Schedule) {
+  const err = scheduleError(schedule);
+  if (err) throw invalid(err);
+}
+
+function checkPlaceRadius(radiusM: number) {
+  if (radiusM < PLACE_RADIUS.min || radiusM > PLACE_RADIUS.max) throw invalid(`Der Radius eines Ortes muss zwischen ${PLACE_RADIUS.min} und ${PLACE_RADIUS.max} m liegen`);
+}
 
 export class CodeService {
   constructor(
@@ -80,7 +105,7 @@ export class CodeService {
       achievementId: c.achievement_id,
       template: c.template,
       label: c.label,
-      url: TEMPLATES[c.template].dynamic ? null : `${this.publicBaseUrl}/c/${c.token}`,
+      url: TEMPLATES[c.template].dynamic || TEMPLATES[c.template].link === false ? null : `${this.publicBaseUrl}/c/${c.token}`,
       perUserLimit: c.per_user_limit,
       perUserCooldownSeconds: c.per_user_cooldown_seconds,
       value: c.value,
@@ -90,13 +115,16 @@ export class CodeService {
       validUntil: iso(c.valid_until),
       active: c.active,
       geo: c.geo_lat !== null && c.geo_lng !== null && c.geo_radius_m !== null ? { lat: c.geo_lat, lng: c.geo_lng, radiusM: c.geo_radius_m } : null,
+      placeName: c.place_name,
+      schedule: c.schedule,
       batchId: c.batch_id,
       createdAt: c.created_at.toISOString(),
     };
   }
 
   async create(orgId: string, input: CodeInput, actor: string): Promise<CodeView[]> {
-    await this.achievements.requireActive(orgId, input.achievementId);
+    const target = await this.achievements.requireActive(orgId, input.achievementId);
+    if (target.auto_rule) throw invalid('Plattform-Abzeichen werden automatisch vergeben und brauchen keine Codes');
     const t = TEMPLATES[input.template];
     for (const [k, v] of Object.entries(t.fixed)) {
       const given = input[k as keyof CodeInput];
@@ -109,6 +137,14 @@ export class CodeService {
       throw invalid('Gültig-bis muss nach Gültig-ab liegen');
     }
     const batchId = input.template === 'voucher' && count > 1 ? randomUUID() : null;
+    if (merged.schedule) checkSchedule(merged.schedule);
+    if (input.template === 'place') {
+      if (!merged.geo) throw invalid('Ein Ort braucht einen Standort');
+      checkPlaceRadius(merged.geo.radiusM);
+      if (!merged.placeName?.trim()) throw invalid('Ein Ort braucht einen Namen');
+    } else if (merged.placeName) {
+      throw invalid('Einen Ortsnamen gibt es nur bei der Vorlage „place“');
+    }
 
     const rows = await this.db.transaction().execute(async (trx) => {
       const created = await trx.insertInto('codes').values(Array.from({ length: count }, () => ({
@@ -127,6 +163,8 @@ export class CodeService {
         geo_lat: merged.geo?.lat ?? null,
         geo_lng: merged.geo?.lng ?? null,
         geo_radius_m: merged.geo?.radiusM ?? null,
+        place_name: input.template === 'place' ? merged.placeName!.trim() : null,
+        schedule: merged.schedule?.length ? JSON.stringify(merged.schedule) : null,
         batch_id: batchId,
         created_by: actor,
       }))).returningAll().execute();
@@ -164,12 +202,21 @@ export class CodeService {
     if (patch.validUntil && current.valid_from && new Date(patch.validUntil) <= current.valid_from) {
       throw invalid('Gültig-bis muss nach Gültig-ab liegen');
     }
+    if ((patch.geo !== undefined || patch.placeName !== undefined) && current.template !== 'place') {
+      throw invalid('Standort und Ortsname lassen sich nur bei Orten ändern');
+    }
+    if (patch.geo) checkPlaceRadius(patch.geo.radiusM);
+    if (patch.schedule) checkSchedule(patch.schedule);
+    if (patch.placeName !== undefined && !patch.placeName.trim()) throw invalid('Ein Ort braucht einen Namen');
     const row = await this.db.transaction().execute(async (trx) => {
       const values: Record<string, unknown> = {};
       if (patch.label !== undefined) values.label = patch.label;
       if (patch.active !== undefined) values.active = patch.active;
       if (patch.validUntil !== undefined) values.valid_until = patch.validUntil;
       if (patch.maxTotal !== undefined) values.max_total = patch.maxTotal;
+      if (patch.geo) Object.assign(values, { geo_lat: patch.geo.lat, geo_lng: patch.geo.lng, geo_radius_m: patch.geo.radiusM });
+      if (patch.placeName !== undefined) values.place_name = patch.placeName.trim();
+      if (patch.schedule !== undefined) values.schedule = patch.schedule?.length ? JSON.stringify(patch.schedule) : null;
       if (Object.keys(values).length === 0) return current;
       const c = await trx.updateTable('codes').set(values).where('id', '=', id).returningAll().executeTakeFirstOrThrow();
       await audit(trx, { actorSub: actor, orgId, action: 'code.update', entity: 'code', entityId: id, data: { fields: Object.keys(patch) } });

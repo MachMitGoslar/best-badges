@@ -1,11 +1,15 @@
 import { useEffect } from 'react';
+import { AppState } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { hydrate, onBeforeSignOut, useAuth } from '../src/auth.ts';
 import { disablePush, linkOf, refreshPush, useLastNotificationResponse } from '../src/push';
+import { reportActivity } from '../src/data.ts';
 import { Medal3DPrewarm } from '../src/components/Medal3DPrewarm';
+// Hintergrund-Aufgabe für Orts-Hinweise muss beim Start registriert sein
+import '../src/placeHints';
 import { colors, font } from '../src/theme.ts';
 import { useFonts } from 'expo-font';
 import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
@@ -33,6 +37,30 @@ function PushBridge() {
   return null;
 }
 
+/** App geöffnet oder zurückgeholt: Tag melden (nur Datum) – der Server prüft dabei Plattform-Abzeichen wie „App genutzt“. */
+function ActivityBridge() {
+  const auth = useAuth();
+  useEffect(() => {
+    if (auth.status !== 'signedIn') return;
+    let last = 0;
+    const ping = () => {
+      // Der Server zählt ohnehin nur einmal pro Tag; hier höchstens einmal pro Stunde fragen
+      if (Date.now() - last < 3600_000) return;
+      last = Date.now();
+      void reportActivity().then((r) => {
+        if (r.bonus.length) {
+          void queryClient.invalidateQueries({ queryKey: ['awards'] });
+          void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        }
+      }).catch(() => { last = 0; });
+    };
+    ping();
+    const sub = AppState.addEventListener('change', (s) => { if (s === 'active') ping(); });
+    return () => sub.remove();
+  }, [auth.status]);
+  return null;
+}
+
 export default function RootLayout() {
   useEffect(() => { void hydrate(); }, []);
   // Schriften laden; bei einem Fehler mit Systemschrift weiter statt leerem Bildschirm
@@ -43,6 +71,7 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <StatusBar style="light" />
         <PushBridge />
+        <ActivityBridge />
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: colors.night[0] },
@@ -57,6 +86,7 @@ export default function RootLayout() {
           <Stack.Screen name="achievements/[id]" options={{ title: '' }} />
           <Stack.Screen name="redeem" options={{ presentation: 'modal', title: 'Abzeichen einlösen' }} />
           <Stack.Screen name="success" options={{ presentation: 'fullScreenModal', headerShown: false, gestureEnabled: false }} />
+          <Stack.Screen name="places/[id]" options={{ presentation: 'modal', title: 'Ort' }} />
           <Stack.Screen name="c/[token]" options={{ headerShown: false }} />
           <Stack.Screen name="u/[handle]" options={{ title: 'Profil' }} />
           <Stack.Screen name="notifications" options={{ title: 'Mitteilungen' }} />

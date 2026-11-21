@@ -21,6 +21,8 @@ const schema = z.object({
   // Cache-Laufzeiten für HSP-Daten in Sekunden
   /** Seltenheit erst ab so vielen Sammelnden je Organisation, vorher alles „gewöhnlich“ */
   RARITY_MIN_COLLECTORS: z.coerce.number().int().min(1).default(50),
+  // Nur Entwicklung: Orte auch mit vorgetäuschtem Standort (iOS-Simulator meldet immer „simuliert“)
+  PLACE_ALLOW_MOCKED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
   /** Push über Apple: alle vier gesetzt = an. Der Schlüssel (.p8) liegt als Datei vor, nie in Umgebungsvariablen. */
   APNS_KEY_FILE: optionalText(z.string()),
   APNS_KEY_ID: optionalText(z.string().regex(/^[A-Z0-9]{10}$/)),

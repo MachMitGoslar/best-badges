@@ -1,7 +1,7 @@
 import { BadgeSpecSchema, type BadgeSpec } from '@best-badges/badge-spec';
 import type { Transaction } from 'kysely';
 import type { Database } from '../db/index.ts';
-import type { Achievement, DB, Tier } from '../db/types.ts';
+import type { Achievement, AutoRule, DB, Tier } from '../db/types.ts';
 import { ApiError, conflict, invalid, notFound } from '../errors.ts';
 import { audit } from './audit.ts';
 import { evaluateCollections } from './collections.ts';
@@ -27,6 +27,11 @@ export interface AchievementInput {
   requiredCount?: number;
   /** Nur Kombination: IDs der Teil-Abzeichen (2–20) */
   items?: string[];
+  /** Plattform-Abzeichen (nur Haupt-Admin-Organisation): automatische Vergabe nach Regel */
+  autoRule?: AutoRule | null;
+  /** Zeitfenster (ISO) */
+  availableFrom?: string | null;
+  availableUntil?: string | null;
 }
 
 export type ItemState = 'approved' | 'pending' | 'rejected';
@@ -65,12 +70,19 @@ export interface AchievementView {
   masked: boolean;
   requiredCount: number | null;
   items: CollectionItemView[];
+  autoRule: AutoRule | null;
+  availableFrom: string | null;
+  availableUntil: string | null;
   createdAt: string;
   updatedAt: string;
   publishedAt: string | null;
 }
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
+
+function checkWindow(from: string | null, until: string | null) {
+  if (from && until && new Date(from) >= new Date(until)) throw invalid('„Verfügbar bis“ muss nach „Verfügbar ab“ liegen');
+}
 
 type ItemRow = { collection_id: string; achievement_id: string; approved_at: Date | null; rejected_at: Date | null; position: number;
   org_id: string; name: string; kind: Achievement['kind']; spec: unknown; hidden: boolean };
@@ -103,6 +115,9 @@ export function toView(a: Achievement, tiers: Tier[], items: ItemRow[] = []): Ac
       .filter((i) => i.collection_id === a.id)
       .sort((x, y) => x.position - y.position)
       .map((i) => ({ achievementId: i.achievement_id, orgId: i.org_id, name: i.name, kind: i.kind, spec: i.spec as BadgeSpec, hidden: i.hidden, masked: false, state: stateOf(i) })),
+    autoRule: a.auto_rule,
+    availableFrom: iso(a.available_from),
+    availableUntil: iso(a.available_until),
     createdAt: a.created_at.toISOString(),
     updatedAt: a.updated_at.toISOString(),
     publishedAt: iso(a.published_at),
@@ -128,6 +143,8 @@ export function present(v: AchievementView, earned: Set<string>): PublicAchievem
     requiredCount: v.requiredCount,
     items,
     publishedAt: v.publishedAt,
+    availableFrom: v.availableFrom,
+    availableUntil: v.availableUntil,
   };
 }
 
@@ -152,7 +169,14 @@ function normalizeTiers(kind: AchievementInput['kind'], tiers: TierInput[] | und
 type Trx = Transaction<DB>;
 
 export class AchievementService {
-  constructor(private db: Database, private now: () => number = Date.now, private notifications?: NotificationService) {}
+  constructor(private db: Database, private now: () => number = Date.now, private notifications?: NotificationService, private adminOrgId?: string) {}
+
+  /** Regeln für Plattform-Abzeichen darf nur die Haupt-Admin-Organisation setzen, nicht für Kombinationen. */
+  private checkAutoRule(orgId: string, kind: Achievement['kind'], rule: AutoRule | null | undefined) {
+    if (!rule) return;
+    if (!this.adminOrgId || orgId !== this.adminOrgId) throw new ApiError(403, 'Forbidden', 'Plattform-Abzeichen gibt es nur für die Haupt-Admin-Organisation');
+    if (kind === 'collection') throw invalid('Kombinationen lassen sich nicht automatisch vergeben');
+  }
 
   /** Neue Anfragen: Mitglieder der Organisationen, deren Teile angefragt werden, benachrichtigen */
   private async notifyRequests(trx: Trx, collectionId: string, itemIds: string[]) {
@@ -275,6 +299,8 @@ export class AchievementService {
     const isCollection = input.kind === 'collection';
     if (!isCollection && (input.items !== undefined || input.requiredCount !== undefined)) throw invalid('Teile und „N von M“ gibt es nur bei Kombinationen');
     const tiers = normalizeTiers(input.kind, input.tiers, input.requiredCount);
+    this.checkAutoRule(orgId, input.kind, input.autoRule);
+    checkWindow(input.availableFrom ?? null, input.availableUntil ?? null);
     const row = await this.db.transaction().execute(async (trx) => {
       if (isCollection) await this.checkItems(trx, orgId, null, input.items, input.requiredCount);
       const a = await trx.insertInto('achievements').values({
@@ -289,6 +315,9 @@ export class AchievementService {
         hidden: input.hidden ?? false,
         hint: input.hint ?? '',
         open_for_collections: input.openForCollections ?? false,
+        auto_rule: input.autoRule ?? null,
+        available_from: input.availableFrom ?? null,
+        available_until: input.availableUntil ?? null,
         vetoed_at: null, vetoed_by: null, veto_reason: null, published_at: null,
         created_by: actor,
       }).returningAll().executeTakeFirstOrThrow();
@@ -304,9 +333,15 @@ export class AchievementService {
     const current = await this.load(orgId, id);
     if (current.status === 'archived') throw conflict('archived', 'Archivierte Abzeichen lassen sich nicht ändern');
     const structural = patch.kind !== undefined || patch.tiers !== undefined || patch.items !== undefined || patch.requiredCount !== undefined;
-    if (structural && current.status !== 'draft') {
-      throw conflict('not_draft', 'Art, Stufen und Teile lassen sich nur im Entwurf ändern');
+    if ((structural || patch.autoRule !== undefined) && current.status !== 'draft') {
+      throw conflict('not_draft', 'Art, Stufen, Teile und Regel lassen sich nur im Entwurf ändern');
     }
+    const nextRule = patch.autoRule !== undefined ? patch.autoRule : current.auto_rule;
+    this.checkAutoRule(orgId, patch.kind ?? current.kind, nextRule);
+    checkWindow(
+      patch.availableFrom !== undefined ? patch.availableFrom : iso(current.available_from),
+      patch.availableUntil !== undefined ? patch.availableUntil : iso(current.available_until),
+    );
     const row = await this.db.transaction().execute(async (trx) => {
       const values: Record<string, unknown> = { updated_at: new Date(this.now()) };
       if (patch.name !== undefined) values.name = patch.name;
@@ -316,6 +351,10 @@ export class AchievementService {
       if (patch.hidden !== undefined) values.hidden = patch.hidden;
       if (patch.hint !== undefined) values.hint = patch.hint;
       if (patch.openForCollections !== undefined) values.open_for_collections = patch.openForCollections;
+      if (patch.autoRule !== undefined) values.auto_rule = patch.autoRule;
+      // Zeitfenster lässt sich jederzeit ändern (z. B. Aktion verlängern)
+      if (patch.availableFrom !== undefined) values.available_from = patch.availableFrom;
+      if (patch.availableUntil !== undefined) values.available_until = patch.availableUntil;
       if (patch.spec !== undefined) values.spec = JSON.stringify(BadgeSpecSchema.parse(patch.spec));
       if (structural) {
         const kind = patch.kind ?? current.kind;

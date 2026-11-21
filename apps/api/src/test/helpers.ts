@@ -34,7 +34,7 @@ export const TEST_DB_URL = process.env.TEST_DATABASE_URL ?? 'postgres://badges:b
 export const testConfig = (over: Partial<Config> = {}): Config => ({
   PORT: 0, HOST: '127.0.0.1', RARITY_MIN_COLLECTORS: 3, NODE_ENV: 'test', DATABASE_URL: TEST_DB_URL, OIDC_ISSUER: ISS, OIDC_AUDIENCE: 'badges-api',
   HSP_BASE_URL: 'http://hsp.test', ADMIN_ORG_ID: ADMIN_ORG, PUBLIC_BASE_URL: 'https://badges.test',
-  MIGRATE_ON_START: false, CORS_ORIGINS: [], HSP_MEMBERSHIP_TTL: 600, HSP_ORG_TTL: 600, ...over,
+  MIGRATE_ON_START: false, CORS_ORIGINS: [], HSP_MEMBERSHIP_TTL: 600, HSP_ORG_TTL: 600, PLACE_ALLOW_MOCKED: false, ...over,
 });
 
 let keyMaterial: Promise<{ privateKey: CryptoKey; keys: JWTVerifyGetKey }> | null = null;

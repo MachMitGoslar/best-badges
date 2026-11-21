@@ -4,17 +4,36 @@ import {
   SECRET_NAME, SECRET_SPEC, BadgeSpecSchema, ICONS, ICON_IDS, PALETTES, PALETTE_IDS, PATTERNS, RARITIES, SHAPES, materialForTier, MATERIALS, randomSpec,
   type BadgeSpec, type IconId, type PaletteId, type PatternId, type Rarity, type ShapeId,
 } from '@best-badges/badge-spec';
-import type { AchievementInput } from '@best-badges/api-client';
+import type { AchievementInput, components } from '@best-badges/api-client';
 import { BadgeView } from '../components/BadgeView.tsx';
 // three.js erst laden, wenn der Editor offen ist (hält die Startseite schlank)
 const Badge3D = lazy(() => import('../components/Badge3D.tsx').then((m) => ({ default: m.Badge3D })));
 import { StatusPill } from '../components/StatusPill.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { ApiFailure } from '../api.ts';
-import { useAchievement, useCollectionCandidates, useSaveAchievement, useTransition } from '../hooks.ts';
+import { useAchievement, useCollectionCandidates, useMe, useSaveAchievement, useTransition } from '../hooks.ts';
 
 type Tab = 'shape' | 'pattern' | 'motif' | 'palette';
 type Kind = 'single' | 'tiered' | 'collection';
+
+/** ISO → Wert für <input type="datetime-local"> in Ortszeit */
+function toLocalInput(iso: string | null | undefined) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+const fromLocalInput = (v: string) => (v ? new Date(v).toISOString() : null);
+type AutoRule = NonNullable<components['schemas']['AutoRule']>;
+
+/** Regeln für Plattform-Abzeichen (nur Haupt-Admin-Organisation) */
+const AUTO_RULES: Record<AutoRule, string> = {
+  active_days: 'App genutzt – Anzahl Tage mit geöffneter App',
+  awards_count: 'Abzeichen gesammelt – Anzahl verschiedener Abzeichen',
+  orgs_count: 'Vielseitig – Abzeichen von verschiedenen Organisationen',
+  places_count: 'Unterwegs – an verschiedenen Orten eingecheckt',
+  collections_count: 'Kombiniert – geschaffte Kombinationen',
+};
 const STATE_LABEL = { approved: 'zugestimmt', pending: 'wartet auf Zustimmung', rejected: 'abgelehnt' } as const;
 interface TierDraft { threshold: number; name: string }
 
@@ -47,6 +66,11 @@ export function EditorPage() {
   const [hidden, setHidden] = useState(false);
   const [hint, setHint] = useState('');
   const [openForCollections, setOpenForCollections] = useState(false);
+  const [autoRule, setAutoRule] = useState<AutoRule | null>(null);
+  const [availableFrom, setAvailableFrom] = useState('');
+  const [availableUntil, setAvailableUntil] = useState('');
+  const me = useMe();
+  const isAdminOrg = !!me.data?.adminOrgId && me.data.adminOrgId === orgId;
   const [items, setItems] = useState<string[]>([]);
   const [requiredCount, setRequiredCount] = useState(2);
   const [itemFilter, setItemFilter] = useState('');
@@ -66,7 +90,8 @@ export function EditorPage() {
     if (!a || loaded) return;
     setSpec(a.spec); setName(a.name); setDescription(a.description); setAwardedText(a.awardedText);
     setKind(a.kind);
-    setHidden(a.hidden); setHint(a.hint); setOpenForCollections(a.openForCollections);
+    setHidden(a.hidden); setHint(a.hint); setOpenForCollections(a.openForCollections); setAutoRule(a.autoRule);
+    setAvailableFrom(toLocalInput(a.availableFrom)); setAvailableUntil(toLocalInput(a.availableUntil));
     if (a.kind === 'collection') { setItems(a.items.map((i) => i.achievementId)); setRequiredCount(a.requiredCount ?? 2); }
     if (a.kind === 'tiered') setTiers(a.tiers.map((t) => ({ threshold: t.threshold, name: t.name ?? '' })));
     if (a.spec.emblem.motif.type === 'monogram') setMonogram(a.spec.emblem.motif.text);
@@ -116,9 +141,11 @@ export function EditorPage() {
       kind, hidden, hint: hint.trim(), openForCollections,
       ...(kind === 'tiered' ? { tiers: tiers.map((t) => ({ threshold: t.threshold, name: t.name.trim() || null })) } : {}),
       ...(kind === 'collection' ? { items, requiredCount } : {}),
+      ...(isAdminOrg && kind !== 'collection' ? { autoRule } : {}),
+      availableFrom: fromLocalInput(availableFrom), availableUntil: fromLocalInput(availableUntil),
     };
     // Art, Stufen und Teile lassen sich nur im Entwurf ändern
-    const body = structural ? input : { name: input.name, description: input.description, awardedText: input.awardedText, spec, hidden, hint: hint.trim(), openForCollections } as AchievementInput;
+    const body = structural ? input : { name: input.name, description: input.description, awardedText: input.awardedText, spec, hidden, hint: hint.trim(), openForCollections, availableFrom: input.availableFrom, availableUntil: input.availableUntil } as AchievementInput;
     try {
       const saved = await save.mutateAsync({ id, input: body });
       setMessage({ kind: 'ok', text: 'Gespeichert.' });
@@ -292,6 +319,37 @@ export function EditorPage() {
               </>
             )}
           </section>
+
+          <section className="panel stack">
+            <h2>Zeitraum</h2>
+            <p className="muted small" style={{ margin: 0 }}>
+              Optional: Nur in diesem Zeitraum zu verdienen, egal über welchen Code oder Ort – z. B. „Weihnachtsmarkt 2026“.
+              Die App zeigt vorher „ab …“, währenddessen einen Countdown und danach „nicht mehr erhältlich“. Wer es hat, behält es.
+              Lässt sich auch nach dem Veröffentlichen ändern, etwa zum Verlängern.
+            </p>
+            <div className="row">
+              <label className="field">Verfügbar ab<input type="datetime-local" value={availableFrom} disabled={readOnly} onChange={(e) => setAvailableFrom(e.target.value)} /></label>
+              <label className="field">Verfügbar bis<input type="datetime-local" value={availableUntil} disabled={readOnly} onChange={(e) => setAvailableUntil(e.target.value)} /></label>
+            </div>
+            {availableFrom && availableUntil && availableFrom >= availableUntil && <p className="small" style={{ margin: 0, color: 'var(--danger, #f87171)' }}>„Verfügbar bis“ muss nach „Verfügbar ab“ liegen.</p>}
+          </section>
+
+          {isAdminOrg && (
+            <section className="panel stack">
+              <h2>Automatische Vergabe</h2>
+              <p className="muted small" style={{ margin: 0 }}>
+                Plattform-Abzeichen bekommt man ohne Code, sobald eine Kennzahl die Schwelle erreicht. Bei „Mit Stufen“ gelten die Stufen-Schwellen,
+                ohne Stufen reicht 1. Plattform-Abzeichen zählen selbst nicht mit. Wer schon gesammelt hat, bekommt es beim nächsten Öffnen der App.
+              </p>
+              <label className="field">Regel
+                <select value={autoRule ?? ''} disabled={!structural || kind === 'collection'} onChange={(e) => setAutoRule((e.target.value || null) as AutoRule | null)}>
+                  <option value="">Keine – Vergabe über Codes</option>
+                  {(Object.keys(AUTO_RULES) as AutoRule[]).map((r) => <option key={r} value={r}>{AUTO_RULES[r]}</option>)}
+                </select>
+              </label>
+              {kind === 'collection' && <p className="muted small" style={{ margin: 0 }}>Kombinationen lassen sich nicht automatisch vergeben.</p>}
+            </section>
+          )}
 
           <section className="panel stack">
             <div className="panel-title" style={{ marginBottom: 0 }}>

@@ -39,6 +39,14 @@
           "isPlatformAdmin": {
             "type": "boolean"
           },
+          "adminOrgId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Nur für Mitglieder der Haupt-Admin-Organisation: deren ID (Plattform-Abzeichen, Rundschreiben)"
+          },
           "organisations": {
             "type": "array",
             "items": {
@@ -67,6 +75,7 @@
           "name",
           "email",
           "isPlatformAdmin",
+          "adminOrgId",
           "organisations"
         ]
       },
@@ -664,6 +673,21 @@
               ]
             }
           },
+          "autoRule": {
+            "$ref": "#/components/schemas/AutoRule"
+          },
+          "availableFrom": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "availableUntil": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "createdAt": {
             "type": "string"
           },
@@ -695,11 +719,29 @@
           "openForCollections",
           "requiredCount",
           "items",
+          "autoRule",
+          "availableFrom",
+          "availableUntil",
           "createdAt",
           "updatedAt",
           "publishedAt"
         ],
         "description": "Abzeichen in der Verwaltung (nur für Mitglieder der Organisation)"
+      },
+      "AutoRule": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "active_days",
+          "awards_count",
+          "orgs_count",
+          "places_count",
+          "collections_count",
+          null
+        ],
+        "description": "active_days: Tage mit geöffneter App · awards_count: gesammelte Abzeichen · orgs_count: verschiedene Organisationen · places_count: besuchte Orte · collections_count: geschaffte Kombinationen"
       },
       "AchievementInput": {
         "type": "object",
@@ -994,6 +1036,37 @@
             },
             "maxItems": 20,
             "description": "Nur Kombination: Teil-Abzeichen (2–20)"
+          },
+          "availableFrom": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Zeitfenster: erst ab dann zu verdienen"
+          },
+          "availableUntil": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Zeitfenster: nur bis dann zu verdienen (Limited Edition)"
+          },
+          "autoRule": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "active_days",
+              "awards_count",
+              "orgs_count",
+              "places_count",
+              "collections_count",
+              null
+            ],
+            "description": "Plattform-Abzeichen (nur Haupt-Admin-Organisation): automatische Vergabe. Fortschritt = Wert der Kennzahl."
           }
         },
         "required": [
@@ -1295,6 +1368,37 @@
             },
             "maxItems": 20,
             "description": "Nur Kombination: Teil-Abzeichen (2–20)"
+          },
+          "availableFrom": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Zeitfenster: erst ab dann zu verdienen"
+          },
+          "availableUntil": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Zeitfenster: nur bis dann zu verdienen (Limited Edition)"
+          },
+          "autoRule": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "active_days",
+              "awards_count",
+              "orgs_count",
+              "places_count",
+              "collections_count",
+              null
+            ],
+            "description": "Plattform-Abzeichen (nur Haupt-Admin-Organisation): automatische Vergabe. Fortschritt = Wert der Kennzahl."
           }
         }
       },
@@ -1315,7 +1419,8 @@
               "station",
               "event",
               "checkout",
-              "voucher"
+              "voucher",
+              "place"
             ]
           },
           "label": {
@@ -1394,6 +1499,15 @@
               "radiusM"
             ]
           },
+          "placeName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/Schedule"
+          },
           "batchId": {
             "type": [
               "string",
@@ -1420,9 +1534,49 @@
           "validUntil",
           "active",
           "geo",
+          "placeName",
+          "schedule",
           "batchId",
           "createdAt"
         ]
+      },
+      "Schedule": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": "object",
+          "properties": {
+            "days": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 7
+              },
+              "minItems": 1,
+              "maxItems": 7,
+              "description": "ISO-Wochentage, 1 = Montag"
+            },
+            "from": {
+              "type": "string",
+              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+            },
+            "to": {
+              "type": "string",
+              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+              "description": "Vor „from“ = über Mitternacht"
+            }
+          },
+          "required": [
+            "days",
+            "from",
+            "to"
+          ]
+        },
+        "maxItems": 14,
+        "description": "Feste Zeiten in Goslarer Ortszeit (Europe/Berlin)"
       },
       "CodeInput": {
         "type": "object",
@@ -1437,7 +1591,8 @@
               "station",
               "event",
               "checkout",
-              "voucher"
+              "voucher",
+              "place"
             ]
           },
           "label": {
@@ -1515,6 +1670,17 @@
               "radiusM"
             ]
           },
+          "placeName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 80,
+            "description": "Nur Vorlage place: öffentlicher Name des Ortes auf der Karte"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/Schedule"
+          },
           "count": {
             "type": "integer",
             "minimum": 1,
@@ -1550,6 +1716,40 @@
             ],
             "exclusiveMinimum": 0,
             "maximum": 1000000
+          },
+          "geo": {
+            "type": "object",
+            "properties": {
+              "lat": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "lng": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              },
+              "radiusM": {
+                "type": "integer",
+                "minimum": 10,
+                "maximum": 5000
+              }
+            },
+            "required": [
+              "lat",
+              "lng",
+              "radiusM"
+            ],
+            "description": "Nur Ort: verschieben"
+          },
+          "placeName": {
+            "type": "string",
+            "maxLength": 80,
+            "description": "Nur Ort: umbenennen"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/Schedule"
           }
         }
       },
@@ -1624,6 +1824,20 @@
                   "string",
                   "null"
                 ]
+              },
+              "availableFrom": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Zeitfenster: erst ab dann zu verdienen"
+              },
+              "availableUntil": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Zeitfenster: nur bis dann zu verdienen"
               }
             },
             "required": [
@@ -1632,7 +1846,9 @@
               "tiers",
               "requiredCount",
               "items",
-              "publishedAt"
+              "publishedAt",
+              "availableFrom",
+              "availableUntil"
             ]
           }
         ]
@@ -3097,6 +3313,13 @@
             },
             "description": "Kombinationen, die durch diese Einlösung vorankommen"
           },
+          "bonus": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BonusUnlock"
+            },
+            "description": "Plattform-Abzeichen, die dadurch dazukamen oder aufstiegen"
+          },
           "rarity": {
             "type": [
               "string",
@@ -3125,6 +3348,7 @@
           "nextThreshold",
           "awardedText",
           "collections",
+          "bonus",
           "rarity"
         ]
       },
@@ -3154,6 +3378,42 @@
           "completed",
           "firstTime"
         ]
+      },
+      "BonusUnlock": {
+        "type": "object",
+        "properties": {
+          "achievement": {
+            "$ref": "#/components/schemas/AchievementRef"
+          },
+          "progress": {
+            "type": "integer"
+          },
+          "tier": {
+            "type": "integer"
+          },
+          "tierCount": {
+            "type": "integer"
+          },
+          "tierUp": {
+            "type": "boolean"
+          },
+          "firstTime": {
+            "type": "boolean"
+          },
+          "awardedText": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "achievement",
+          "progress",
+          "tier",
+          "tierCount",
+          "tierUp",
+          "firstTime",
+          "awardedText"
+        ],
+        "description": "Plattform-Abzeichen, das automatisch dazukam oder aufstieg"
       },
       "RedeemFailure": {
         "allOf": [
@@ -3236,6 +3496,7 @@
               "event",
               "checkout",
               "voucher",
+              "place",
               null
             ]
           },
@@ -3335,6 +3596,116 @@
           "rarity",
           "firstEarnedAt",
           "updatedAt"
+        ]
+      },
+      "Place": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "radiusM": {
+            "type": "integer"
+          },
+          "validUntil": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "availableUntil": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Ende des Zeitfensters des Abzeichens"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/Schedule"
+          },
+          "scheduleText": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Feste Zeiten lesbar, z. B. „Sa 07:00–13:00“"
+          },
+          "openNow": {
+            "type": "boolean",
+            "description": "Gerade innerhalb der festen Zeiten"
+          },
+          "achievement": {
+            "$ref": "#/components/schemas/AchievementRef"
+          },
+          "done": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Mit Anmeldung: hier vorerst nicht mehr möglich (Limit oder Wartezeit). Ohne Anmeldung null."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "lat",
+          "lng",
+          "radiusM",
+          "validUntil",
+          "availableUntil",
+          "schedule",
+          "scheduleText",
+          "openNow",
+          "achievement",
+          "done"
+        ]
+      },
+      "CheckInInput": {
+        "type": "object",
+        "properties": {
+          "geo": {
+            "type": "object",
+            "properties": {
+              "lat": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "lng": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              },
+              "accuracyM": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 10000,
+                "description": "Genauigkeit laut Gerät in Metern; über 150 m wird nicht eingecheckt"
+              },
+              "mocked": {
+                "type": "boolean",
+                "description": "Gerät meldet vorgetäuschten Standort (Android)"
+              }
+            },
+            "required": [
+              "lat",
+              "lng",
+              "accuracyM"
+            ]
+          }
+        },
+        "required": [
+          "geo"
         ]
       },
       "ApiKey": {
@@ -6418,6 +6789,52 @@
         }
       }
     },
+    "/api/v1/users/me/activity": {
+      "post": {
+        "tags": [
+          "Sammlung"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "App geöffnet: Tag vermerken (nur das Datum) und Plattform-Abzeichen prüfen – einmal pro Tag wirksam",
+        "responses": {
+          "200": {
+            "description": "Vermerkt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bonus": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BonusUnlock"
+                      }
+                    }
+                  },
+                  "required": [
+                    "bonus"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/users/me/awards": {
       "get": {
         "tags": [
@@ -6453,6 +6870,177 @@
           },
           "401": {
             "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/places": {
+      "get": {
+        "tags": [
+          "Orte"
+        ],
+        "summary": "Orte zum Einchecken (mit Anmeldung inkl. eigenem Stand)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^-?\\d+(\\.\\d+)?(,-?\\d+(\\.\\d+)?){3}$",
+              "description": "Kartenausschnitt: minLng,minLat,maxLng,maxLat",
+              "example": "10.38,51.88,10.48,51.93"
+            },
+            "required": false,
+            "description": "Kartenausschnitt: minLng,minLat,maxLng,maxLat",
+            "name": "bbox",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Orte",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Place"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ungültige Eingabe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/places/{id}/checkins": {
+      "post": {
+        "tags": [
+          "Orte"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "An einem Ort einchecken (Standort wird geprüft, aber nicht gespeichert)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckInInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Eingecheckt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemSuccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Zu weit entfernt oder unplausibler Standort",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ort unbekannt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Limit pro Person erreicht, Wartezeit läuft, außerhalb der Zeiten oder noch nicht verfügbar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemFailure"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Ort abgelaufen, inaktiv, ausgeschöpft oder Abzeichen nicht verfügbar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemFailure"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Standort zu ungenau oder ungültige Eingabe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemFailure"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Zu viele Versuche",
             "content": {
               "application/json": {
                 "schema": {

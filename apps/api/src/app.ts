@@ -16,12 +16,14 @@ import type { OrgDirectory } from './orgDirectory.ts';
 import { AchievementService } from './services/achievements.ts';
 import { CodeService } from './services/codes.ts';
 import { RedemptionService } from './services/redemptions.ts';
+import { PlaceService } from './services/places.ts';
 import { perUserRateLimit } from './rateLimit.ts';
 import { achievementRoutes } from './routes/achievements.ts';
 import { codeRoutes } from './routes/codes.ts';
 import { publicRoutes } from './routes/public.ts';
 import { adminRoutes } from './routes/admin.ts';
 import { redemptionRoutes } from './routes/redemptions.ts';
+import { placeRoutes } from './routes/places.ts';
 import { integrationRoutes } from './routes/integrations.ts';
 import { collectionRoutes } from './routes/collections.ts';
 import { profileRoutes } from './routes/profiles.ts';
@@ -39,6 +41,7 @@ const MeSchema = z.object({
   name: z.string().nullable(),
   email: z.string().nullable(),
   isPlatformAdmin: z.boolean(),
+  adminOrgId: z.string().uuid().nullable().openapi({ description: 'Nur für Mitglieder der Haupt-Admin-Organisation: deren ID (Plattform-Abzeichen, Rundschreiben)' }),
   organisations: z.array(z.object({ id: z.string().uuid(), name: z.string().nullable() })),
 }).openapi('Me');
 
@@ -73,9 +76,10 @@ export function createApp({ config, directory, db, authKeys, now = Date.now, not
     keys: authKeys,
     onUser: (u) => notifications.trackMembership(u.sub, u.organisationIds),
   });
-  const achievements = new AchievementService(db, now, notifications);
+  const achievements = new AchievementService(db, now, notifications, config.ADMIN_ORG_ID);
   const codes = new CodeService(db, achievements, config.PUBLIC_BASE_URL, now);
-  const redemptions = new RedemptionService(db, now, notifications);
+  const redemptions = new RedemptionService(db, now, notifications, { allowMockedPlaces: config.PLACE_ALLOW_MOCKED });
+  const places = new PlaceService(db, now);
   const keys = new ApiKeyService(db, now);
   const profiles = new ProfileService(db, config.PUBLIC_BASE_URL, now);
   const rarity = new RarityService(db, { minCollectors: config.RARITY_MIN_COLLECTORS }, now);
@@ -107,7 +111,7 @@ export function createApp({ config, directory, db, authKeys, now = Date.now, not
     const organisations = (await Promise.all(user.organisationIds.map((id) => directory.getOrganisation(id, token))))
       .filter((o) => o !== null)
       .map((o) => ({ id: o.id, name: o.name }));
-    return c.json({ sub: user.sub, name: user.name, email: user.email, isPlatformAdmin: user.isPlatformAdmin, organisations }, 200);
+    return c.json({ sub: user.sub, name: user.name, email: user.email, isPlatformAdmin: user.isPlatformAdmin, adminOrgId: user.isPlatformAdmin ? config.ADMIN_ORG_ID : null, organisations }, 200);
   });
 
   app.get('/api/v1/orgs/:orgId', auth.required, auth.orgMember, async (c) => {
@@ -122,7 +126,9 @@ export function createApp({ config, directory, db, authKeys, now = Date.now, not
   profileRoutes(app, { profiles, rarity, auth });
   notificationRoutes(app, { notifications, auth });
   adminRoutes(app, { achievements, auth });
-  redemptionRoutes(app, { redemptions, rarity, auth, rateLimit: perUserRateLimit(30, 60_000) });
+  const redeemLimit = perUserRateLimit(30, 60_000);
+  redemptionRoutes(app, { redemptions, rarity, auth, rateLimit: redeemLimit });
+  placeRoutes(app, { places, redemptions, rarity, auth, rateLimit: redeemLimit });
   integrationRoutes(app, { keys, codes, redemptions, auth, keyRateLimit: perUserRateLimit(120, 60_000, (c) => c.get('apiKey')?.id) });
 
   app.openAPIRegistry.registerComponent('securitySchemes', 'bearer', { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' });

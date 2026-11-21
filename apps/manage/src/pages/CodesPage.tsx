@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router';
 import type { Code, CodeInput } from '@best-badges/api-client';
 import { BadgeView } from '../components/BadgeView.tsx';
 import { Qr } from '../components/Qr.tsx';
+import { PlacePicker, type PlaceValue } from '../components/PlacePicker.tsx';
+import { ScheduleEditor, describeSchedule, type Schedule } from '../components/ScheduleEditor.tsx';
 import { StatusPill } from '../components/StatusPill.tsx';
 import { Icon, type IconName } from '../components/Icon.tsx';
 import { ApiFailure } from '../api.ts';
@@ -15,6 +17,7 @@ const TEMPLATES: Record<Template, { icon: IconName; title: string; text: string 
   event: { icon: 'smartphone', title: 'Veranstaltung', text: 'Du zeigst einen QR-Code auf deinem Handy, der sich alle 15 Sekunden ändert. Abfotografieren bringt nichts.' },
   checkout: { icon: 'bag', title: 'Kasse', text: 'Für Käufe: Du tippst die Menge ein und zeigst einen einmaligen QR-Code, der 10 Minuten gilt.' },
   voucher: { icon: 'layers', title: 'Gutschein-Stapel', text: 'Viele einmalige Codes zum Ausdrucken, z. B. für Eintrittskarten oder Kassenbons.' },
+  place: { icon: 'mapPin', title: 'Ort', text: 'Ganz ohne Code: Wer in der App vor Ort ist, checkt ein. Der Ort erscheint auf der Karte. Gut für Einstiegs-Abzeichen.' },
 };
 
 function CreateForm({ template, onCreate, onCancel, busy }: { template: Template; onCreate: (i: Omit<CodeInput, 'achievementId'>) => void; onCancel: () => void; busy: boolean }) {
@@ -25,16 +28,23 @@ function CreateForm({ template, onCreate, onCancel, busy }: { template: Template
   const [validUntil, setValidUntil] = useState('');
   const [useGeo, setUseGeo] = useState(false);
   const [geo, setGeo] = useState({ lat: '', lng: '', radiusM: '80' });
+  const [place, setPlace] = useState<PlaceValue | null>(null);
+  const [placeName, setPlaceName] = useState('');
+  const [useSchedule, setUseSchedule] = useState(false);
+  const [schedule, setSchedule] = useState<Schedule>([{ days: [6], from: '07:00', to: '13:00' }]);
+  const schedulable = template === 'station' || template === 'event' || template === 'place';
 
   function submit() {
     const input: Omit<CodeInput, 'achievementId'> = { template, label: label.trim() };
-    if (template === 'station') {
+    if (template === 'station' || template === 'place') {
       if (repeat === 'daily') { input.perUserLimit = null; input.perUserCooldownSeconds = 24 * 3600; }
       if (repeat === 'unlimited') input.perUserLimit = null;
-      if (useGeo && geo.lat && geo.lng) input.geo = { lat: Number(geo.lat), lng: Number(geo.lng), radiusM: Number(geo.radiusM) };
+      if (template === 'station' && useGeo && geo.lat && geo.lng) input.geo = { lat: Number(geo.lat), lng: Number(geo.lng), radiusM: Number(geo.radiusM) };
     }
+    if (template === 'place') { input.geo = place; input.placeName = placeName.trim(); }
     if (template === 'voucher') { input.count = count; input.value = value; }
     if (validUntil) input.validUntil = new Date(validUntil).toISOString();
+    if (schedulable && useSchedule && schedule.length) input.schedule = schedule;
     onCreate(input);
   }
 
@@ -42,7 +52,13 @@ function CreateForm({ template, onCreate, onCancel, busy }: { template: Template
     <div className="panel stack">
       <h2 className="row"><Icon name={TEMPLATES[template].icon} size={22} /> {TEMPLATES[template].title}</h2>
       <label className="field">Bezeichnung (nur für dich)<input value={label} maxLength={120} onChange={(e) => setLabel(e.target.value)} placeholder={template === 'station' ? 'z. B. Station 3: Ameisenhaufen' : 'z. B. Sommerfest 2027'} /></label>
-      {template === 'station' && (
+      {template === 'place' && (
+        <>
+          <label className="field">Name des Ortes (öffentlich auf der Karte)<input value={placeName} maxLength={80} onChange={(e) => setPlaceName(e.target.value)} placeholder="z. B. Kaiserpfalz" /></label>
+          <PlacePicker value={place} onChange={setPlace} />
+        </>
+      )}
+      {(template === 'station' || template === 'place') && (
         <>
           <div className="field">Wie oft pro Person?
             <div className="seg">
@@ -51,8 +67,8 @@ function CreateForm({ template, onCreate, onCancel, busy }: { template: Template
               <button aria-pressed={repeat === 'unlimited'} onClick={() => setRepeat('unlimited')}>Beliebig</button>
             </div>
           </div>
-          <label className="row small"><input type="checkbox" checked={useGeo} onChange={(e) => setUseGeo(e.target.checked)} /> Nur in der Nähe einlösbar (Standort)</label>
-          {useGeo && (
+          {template === 'station' && <label className="row small"><input type="checkbox" checked={useGeo} onChange={(e) => setUseGeo(e.target.checked)} /> Nur in der Nähe einlösbar (Standort)</label>}
+          {template === 'station' && useGeo && (
             <div className="row">
               <label className="field">Breite<input value={geo.lat} onChange={(e) => setGeo({ ...geo, lat: e.target.value })} placeholder="51.9055" /></label>
               <label className="field">Länge<input value={geo.lng} onChange={(e) => setGeo({ ...geo, lng: e.target.value })} placeholder="10.4297" /></label>
@@ -68,9 +84,15 @@ function CreateForm({ template, onCreate, onCancel, busy }: { template: Template
           <label className="field">Wert je Code<input type="number" min={1} max={1000} value={value} onChange={(e) => setValue(Number(e.target.value))} /></label>
         </div>
       )}
+      {schedulable && (
+        <>
+          <label className="row small"><input type="checkbox" checked={useSchedule} onChange={(e) => setUseSchedule(e.target.checked)} /> Nur zu festen Zeiten (z. B. samstags 7–13 Uhr)</label>
+          {useSchedule && <ScheduleEditor value={schedule} onChange={setSchedule} />}
+        </>
+      )}
       {template !== 'checkout' && <label className="field">Gültig bis (optional)<input type="datetime-local" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} /></label>}
       <div className="row">
-        <button className="btn btn-primary" disabled={busy} onClick={submit}>{busy ? 'Legt an …' : 'Anlegen'}</button>
+        <button className="btn btn-primary" disabled={busy || (template === 'place' && (!place || !placeName.trim()))} onClick={submit}>{busy ? 'Legt an …' : 'Anlegen'}</button>
         <button className="btn btn-ghost" onClick={onCancel}>Abbrechen</button>
       </div>
     </div>
@@ -79,7 +101,7 @@ function CreateForm({ template, onCreate, onCancel, busy }: { template: Template
 
 function usage(c: Code) {
   const per = c.perUserLimit === null ? (c.perUserCooldownSeconds ? 'einmal pro Tag' : 'beliebig oft') : c.perUserLimit === 1 ? 'einmal' : `${c.perUserLimit}×`;
-  return `${c.uses}${c.maxTotal ? ` / ${c.maxTotal}` : ''} eingelöst · pro Person ${per}${c.value > 1 ? ` · Wert ${c.value}` : ''}${c.geo ? ' · mit Standort' : ''}`;
+  return `${c.uses}${c.maxTotal ? ` / ${c.maxTotal}` : ''} eingelöst · pro Person ${per}${c.value > 1 ? ` · Wert ${c.value}` : ''}${c.geo && c.template !== 'place' ? ' · mit Standort' : ''}${c.placeName ? ` · ${c.placeName}, Radius ${c.geo?.radiusM ?? '?'} m` : ''}${c.schedule?.length ? ` · nur ${describeSchedule(c.schedule)}` : ''}`;
 }
 
 export function CodesPage() {
@@ -143,7 +165,8 @@ export function CodesPage() {
       )}
       {error && <div className="notice notice-error" style={{ marginBottom: 16 }}>{error}</div>}
 
-      {a.status !== 'archived' && (template ? (
+      {a.autoRule && <div className="notice" style={{ marginBottom: 16 }}>Plattform-Abzeichen werden automatisch nach ihrer Regel vergeben und brauchen keine Codes.</div>}
+      {a.status !== 'archived' && !a.autoRule && (template ? (
         <CreateForm template={template} busy={create.isPending} onCreate={(i) => void onCreate(i)} onCancel={() => setTemplate(null)} />
       ) : (
         <section className="stack" style={{ marginBottom: 24 }}>

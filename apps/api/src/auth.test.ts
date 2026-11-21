@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { Database } from './db/index.ts';
 import { BODY_LIMIT } from './app.ts';
-import { WALD_ORG, freshDatabase, signToken, testApp } from './test/helpers.ts';
+import { ADMIN_ORG, WALD_ORG, freshDatabase, signToken, testApp } from './test/helpers.ts';
 
 let db: Database;
 let call: Awaited<ReturnType<typeof testApp>>['call'];
@@ -25,7 +25,7 @@ describe('Auth', () => {
     const res = await call('GET', '/api/v1/me', 'waldpfad');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
-      sub: 'waldpfad', name: 'WALDPFAD', email: 'waldpfad@example.test', isPlatformAdmin: false,
+      sub: 'waldpfad', name: 'WALDPFAD', email: 'waldpfad@example.test', isPlatformAdmin: false, adminOrgId: null,
       organisations: [{ id: WALD_ORG, name: 'Walderlebnispfad' }],
     });
   });
@@ -37,7 +37,9 @@ describe('Auth', () => {
   });
 
   it('erkennt die Haupt-Admin-Organisation', async () => {
-    expect((await call('GET', '/api/v1/me', 'admin')).body.isPlatformAdmin).toBe(true);
+    const me = (await call('GET', '/api/v1/me', 'admin')).body;
+    expect(me.isPlatformAdmin).toBe(true);
+    expect(me.adminOrgId).toBe(ADMIN_ORG);
   });
 
   it('lässt nur Mitglieder auf ihre Organisation zugreifen', async () => {

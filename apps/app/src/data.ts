@@ -20,6 +20,9 @@ export type RedeemResult = Awaited<ReturnType<typeof redeem>>;
 export async function redeem(code: string) {
   return unwrap(api.POST('/api/v1/redemptions', { body: { code } }));
 }
+/** App geöffnet: Tag melden; liefert neu verdiente Plattform-Abzeichen */
+export const reportActivity = () => unwrap(api.POST('/api/v1/users/me/activity'));
+
 let lastResult: RedeemResult | null = null;
 export const setLastResult = (r: RedeemResult) => { lastResult = r; };
 export const getLastResult = () => lastResult;
