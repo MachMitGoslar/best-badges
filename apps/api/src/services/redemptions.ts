@@ -3,6 +3,7 @@ import type { BadgeSpec } from '@best-badges/badge-spec';
 import type { Database } from '../db/index.ts';
 import type { Achievement, AutoRule, Code, DB, RedemptionStatus, Tier } from '../db/types.ts';
 import { AUTO_RULES, RULES_ON_EARN, berlinDay, metric } from './rules.ts';
+import { describe as describeSchedule, isOpen } from './schedule.ts';
 import { parseScanned, verifyCheckout, verifyEvent } from './signing.ts';
 import { ApiError, conflict, notFound } from '../errors.ts';
 import type { ApiKeyPrincipal } from './apiKeys.ts';
@@ -87,7 +88,19 @@ const MESSAGES: Record<FailureStatus, string> = {
   out_of_range: 'Du bist zu weit vom Ort dieses Codes entfernt.',
   inaccurate: 'Dein Standort ist gerade zu ungenau. Geh ein paar Schritte ins Freie und versuch es noch einmal.',
   implausible: 'Dieser Standort wirkt nicht echt. Versuch es später noch einmal.',
+  not_started: 'Dieses Abzeichen gibt es noch nicht.',
+  ended: 'Dieses Abzeichen gibt es nicht mehr.',
+  closed: 'Das geht gerade nicht – nur zu bestimmten Zeiten.',
 };
+
+const berlinDate = (d: Date) => new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', day: 'numeric', month: 'numeric', year: 'numeric' }).format(d);
+
+/** Zeitfenster des Abzeichens: null = jetzt verfügbar, sonst Status und Meldung mit Datum */
+export function windowState(a: Pick<Achievement, 'available_from' | 'available_until'>, nowMs: number): { status: 'not_started' | 'ended'; message: string } | null {
+  if (a.available_from && a.available_from.getTime() > nowMs) return { status: 'not_started', message: `Dieses Abzeichen gibt es erst ab dem ${berlinDate(a.available_from)}.` };
+  if (a.available_until && a.available_until.getTime() <= nowMs) return { status: 'ended', message: `Dieses Abzeichen gab es nur bis zum ${berlinDate(a.available_until)}.` };
+  return null;
+}
 
 /** Entfernung in Metern (Haversine) */
 export function distanceM(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
@@ -120,7 +133,7 @@ const INVALID = { ok: false, status: 'invalid', code: null, achievement: null } 
 /** Ergebnis der Prüfung eines Codes, ohne Nutzungsgrenzen. */
 type Resolved =
   | { ok: true; code: Code; achievement: Achievement; value: number; nonce: string | null }
-  | { ok: false; status: FailureStatus; code: Code | null; achievement: Achievement | null };
+  | { ok: false; status: FailureStatus; code: Code | null; achievement: Achievement | null; message?: string };
 
 export class RedemptionService {
   constructor(private db: Database, private now: () => number = Date.now, private notifications?: NotificationService, private opts: { allowMockedPlaces?: boolean } = {}) {}
@@ -147,7 +160,7 @@ export class RedemptionService {
 
   private async check(db: Database | Transaction<DB>, code: Code, params: URLSearchParams): Promise<Resolved> {
     const achievement = await db.selectFrom('achievements').selectAll().where('id', '=', code.achievement_id).executeTakeFirstOrThrow();
-    const fail = (status: FailureStatus): Resolved => ({ ok: false, status, code, achievement });
+    const fail = (status: FailureStatus, message?: string): Resolved => ({ ok: false, status, code, achievement, message });
     const now = this.now();
 
     let value = code.value;
@@ -162,10 +175,13 @@ export class RedemptionService {
       nonce = claim.nonce;
     }
     if (!isVisible(achievement)) return fail('unavailable');
+    const window = windowState(achievement, now);
+    if (window) return fail(window.status, window.message);
     if (!code.active) return fail('inactive');
     if (code.valid_from && code.valid_from.getTime() > now) return fail('inactive');
     if (code.valid_until && code.valid_until.getTime() <= now) return fail('expired');
     if (code.max_total !== null && code.uses >= code.max_total) return fail('exhausted');
+    if (!isOpen(code.schedule, now)) return fail('closed', `Das geht nur zu bestimmten Zeiten: ${describeSchedule(code.schedule)}.`);
     return { ok: true, code, achievement, value, nonce };
   }
 
@@ -191,11 +207,11 @@ export class RedemptionService {
 
   /** Gemeinsamer Abschluss für Scan und Check-in: Grenzen, Standort, Fortschritt, Protokoll. Code ist gesperrt. */
   private async complete(trx: Transaction<DB>, userSub: string, r: Resolved, geo: PlaceGeo | null, source: 'scan' | 'place'): Promise<RedeemResult> {
-    const logFailure = async (status: FailureStatus, code: Code | null, achievement: Achievement | null, retryAfterSeconds?: number): Promise<RedeemFailure> => {
+    const logFailure = async (status: FailureStatus, code: Code | null, achievement: Achievement | null, retryAfterSeconds?: number, message?: string): Promise<RedeemFailure> => {
       await trx.insertInto('redemptions').values({ code_id: code?.id ?? null, achievement_id: achievement?.id ?? null, user_sub: userSub, value: 0, status, source, created_at: new Date(this.now()) }).execute();
-      return { status, message: MESSAGES[status], ...(retryAfterSeconds ? { retryAfterSeconds } : {}) };
+      return { status, message: message ?? MESSAGES[status], ...(retryAfterSeconds ? { retryAfterSeconds } : {}) };
     };
-    if (!r.ok) return logFailure(r.status, r.code, r.achievement);
+    if (!r.ok) return logFailure(r.status, r.code, r.achievement, undefined, r.message);
     const { code, achievement, value, nonce } = r;
     const now = this.now();
 
@@ -322,7 +338,11 @@ export class RedemptionService {
   /** Plattform-Abzeichen mit diesen Regeln neu bewerten. Liefert nur, was dazukam oder aufstieg. */
   async applyRules(trx: Transaction<DB>, userSub: string, rules: readonly AutoRule[], push: boolean): Promise<BonusUnlock[]> {
     const list = await trx.selectFrom('achievements').selectAll()
-      .where('auto_rule', 'in', [...rules]).where('status', '=', 'live').where('vetoed_at', 'is', null).execute();
+      .where('auto_rule', 'in', [...rules]).where('status', '=', 'live').where('vetoed_at', 'is', null)
+      // Nur Plattform-Abzeichen in ihrem Zeitfenster
+      .where((eb) => eb.or([eb('available_from', 'is', null), eb('available_from', '<=', new Date(this.now()))]))
+      .where((eb) => eb.or([eb('available_until', 'is', null), eb('available_until', '>', new Date(this.now()))]))
+      .execute();
     if (list.length === 0) return [];
     const current = new Map((await trx.selectFrom('awards').select(['achievement_id', 'progress'])
       .where('user_sub', '=', userSub).where('achievement_id', 'in', list.map((a) => a.id)).execute()).map((a) => [a.achievement_id, a.progress]));
@@ -359,7 +379,7 @@ export class RedemptionService {
   async preview(scanned: string, userSub?: string) {
     const r = await this.resolve(this.db, scanned, false);
     if (!r.achievement || (!r.ok && r.status === 'unavailable')) {
-      return { status: r.ok ? 'ok' : r.status, message: r.ok ? null : MESSAGES[r.status], achievement: null, template: r.code?.template ?? null, value: null, award: null };
+      return { status: r.ok ? 'ok' : r.status, message: r.ok ? null : (r.message ?? MESSAGES[r.status]), achievement: null, template: r.code?.template ?? null, value: null, award: null };
     }
     let award = null;
     if (userSub) {
@@ -368,7 +388,7 @@ export class RedemptionService {
     }
     return {
       status: r.ok ? 'ok' : r.status,
-      message: r.ok ? null : MESSAGES[r.status],
+      message: r.ok ? null : (r.message ?? MESSAGES[r.status]),
       achievement: summary(r.achievement, (award?.tier ?? 0) >= 1),
       template: r.code!.template,
       value: r.ok ? r.value : null,
@@ -416,6 +436,8 @@ export class RedemptionService {
       if (!isVisible(achievement)) throw new ApiError(410, 'unavailable', MESSAGES.unavailable);
       if (achievement.kind === 'collection') throw conflict('collection', 'Kombinationen bekommt man über ihre Teile');
       if (achievement.auto_rule) throw conflict('auto_rule', 'Plattform-Abzeichen werden automatisch vergeben');
+      const window = windowState(achievement, this.now());
+      if (window) throw new ApiError(window.status === 'ended' ? 410 : 409, window.status, window.message);
 
       if (input.reference) {
         // Gleiche Referenz nacheinander abarbeiten, damit parallele Wiederholungen nicht doppelt zählen

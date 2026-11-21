@@ -3,7 +3,7 @@ import type { MiddlewareHandler } from 'hono';
 import type { RedemptionService } from '../services/redemptions.ts';
 import type { PlaceService } from '../services/places.ts';
 import type { RarityService } from '../services/rarity.ts';
-import { ErrorSchema, IdParams, PublicSummarySchema, errors, json } from './schemas.ts';
+import { ErrorSchema, IdParams, PublicSummarySchema, ScheduleSchema, errors, json } from './schemas.ts';
 import { RedeemFailureSchema, RedeemSuccessSchema, redeemResponse } from './redemptions.ts';
 
 const PlaceSchema = z.object({
@@ -13,6 +13,10 @@ const PlaceSchema = z.object({
   lng: z.number(),
   radiusM: z.number().int(),
   validUntil: z.string().nullable(),
+  availableUntil: z.string().nullable().openapi({ description: 'Ende des Zeitfensters des Abzeichens' }),
+  schedule: ScheduleSchema.nullable(),
+  scheduleText: z.string().nullable().openapi({ description: 'Feste Zeiten lesbar, z. B. „Sa 07:00–13:00“' }),
+  openNow: z.boolean().openapi({ description: 'Gerade innerhalb der festen Zeiten' }),
   achievement: PublicSummarySchema,
   done: z.boolean().nullable().openapi({ description: 'Mit Anmeldung: hier vorerst nicht mehr möglich (Limit oder Wartezeit). Ohne Anmeldung null.' }),
 }).openapi('Place');
@@ -63,7 +67,7 @@ export function placeRoutes(app: OpenAPIHono, deps: {
       200: json(RedeemSuccessSchema, 'Eingecheckt'),
       403: json(RedeemFailureSchema, 'Zu weit entfernt oder unplausibler Standort'),
       404: json(RedeemFailureSchema, 'Ort unbekannt'),
-      409: json(RedeemFailureSchema, 'Limit pro Person erreicht oder Wartezeit läuft'),
+      409: json(RedeemFailureSchema, 'Limit pro Person erreicht, Wartezeit läuft, außerhalb der Zeiten oder noch nicht verfügbar'),
       410: json(RedeemFailureSchema, 'Ort abgelaufen, inaktiv, ausgeschöpft oder Abzeichen nicht verfügbar'),
       422: json(RedeemFailureSchema, 'Standort zu ungenau oder ungültige Eingabe'),
       401: errors[401], 429: json(ErrorSchema, 'Zu viele Versuche'),

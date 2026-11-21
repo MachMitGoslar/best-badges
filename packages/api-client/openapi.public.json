@@ -51,6 +51,44 @@
           "message"
         ]
       },
+      "Schedule": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": "object",
+          "properties": {
+            "days": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 7
+              },
+              "minItems": 1,
+              "maxItems": 7,
+              "description": "ISO-Wochentage, 1 = Montag"
+            },
+            "from": {
+              "type": "string",
+              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+            },
+            "to": {
+              "type": "string",
+              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+              "description": "Vor „from“ = über Mitternacht"
+            }
+          },
+          "required": [
+            "days",
+            "from",
+            "to"
+          ]
+        },
+        "maxItems": 14,
+        "description": "Feste Zeiten in Goslarer Ortszeit (Europe/Berlin)"
+      },
       "PublicAchievement": {
         "anyOf": [
           {
@@ -122,6 +160,20 @@
                   "string",
                   "null"
                 ]
+              },
+              "availableFrom": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Zeitfenster: erst ab dann zu verdienen"
+              },
+              "availableUntil": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Zeitfenster: nur bis dann zu verdienen"
               }
             },
             "required": [
@@ -130,7 +182,9 @@
               "tiers",
               "requiredCount",
               "items",
-              "publishedAt"
+              "publishedAt",
+              "availableFrom",
+              "availableUntil"
             ]
           }
         ]
@@ -1062,6 +1116,27 @@
               "null"
             ]
           },
+          "availableUntil": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Ende des Zeitfensters des Abzeichens"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/Schedule"
+          },
+          "scheduleText": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Feste Zeiten lesbar, z. B. „Sa 07:00–13:00“"
+          },
+          "openNow": {
+            "type": "boolean",
+            "description": "Gerade innerhalb der festen Zeiten"
+          },
           "achievement": {
             "$ref": "#/components/schemas/AchievementRef"
           },
@@ -1080,6 +1155,10 @@
           "lng",
           "radiusM",
           "validUntil",
+          "availableUntil",
+          "schedule",
+          "scheduleText",
+          "openNow",
           "achievement",
           "done"
         ]
@@ -2294,7 +2373,7 @@
             }
           },
           "409": {
-            "description": "Limit pro Person erreicht oder Wartezeit läuft",
+            "description": "Limit pro Person erreicht, Wartezeit läuft, außerhalb der Zeiten oder noch nicht verfügbar",
             "content": {
               "application/json": {
                 "schema": {

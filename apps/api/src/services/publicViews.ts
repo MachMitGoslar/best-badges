@@ -29,6 +29,8 @@ export interface PublicAchievementFull extends PublicSummaryFull {
   /** Nur Kombination: zugestimmte Teile */
   items: PublicSummary[];
   publishedAt: string | null;
+  availableFrom: string | null;
+  availableUntil: string | null;
 }
 export type PublicAchievement = PublicAchievementFull | SecretRef;
 

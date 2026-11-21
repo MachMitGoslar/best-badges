@@ -2655,7 +2655,7 @@ export interface paths {
                         "application/json": components["schemas"]["RedeemFailure"];
                     };
                 };
-                /** @description Limit pro Person erreicht oder Wartezeit läuft */
+                /** @description Limit pro Person erreicht, Wartezeit läuft, außerhalb der Zeiten oder noch nicht verfügbar */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -3282,6 +3282,8 @@ export interface components {
                 state: "approved" | "pending" | "rejected";
             }[];
             autoRule: components["schemas"]["AutoRule"];
+            availableFrom: string | null;
+            availableUntil: string | null;
             createdAt: string;
             updatedAt: string;
             publishedAt: string | null;
@@ -3342,6 +3344,16 @@ export interface components {
             /** @description Nur Kombination: Teil-Abzeichen (2–20) */
             items?: string[];
             /**
+             * Format: date-time
+             * @description Zeitfenster: erst ab dann zu verdienen
+             */
+            availableFrom?: string | null;
+            /**
+             * Format: date-time
+             * @description Zeitfenster: nur bis dann zu verdienen (Limited Edition)
+             */
+            availableUntil?: string | null;
+            /**
              * @description Plattform-Abzeichen (nur Haupt-Admin-Organisation): automatische Vergabe. Fortschritt = Wert der Kennzahl.
              * @enum {string|null}
              */
@@ -3398,6 +3410,16 @@ export interface components {
             /** @description Nur Kombination: Teil-Abzeichen (2–20) */
             items?: string[];
             /**
+             * Format: date-time
+             * @description Zeitfenster: erst ab dann zu verdienen
+             */
+            availableFrom?: string | null;
+            /**
+             * Format: date-time
+             * @description Zeitfenster: nur bis dann zu verdienen (Limited Edition)
+             */
+            availableUntil?: string | null;
+            /**
              * @description Plattform-Abzeichen (nur Haupt-Admin-Organisation): automatische Vergabe. Fortschritt = Wert der Kennzahl.
              * @enum {string|null}
              */
@@ -3426,10 +3448,19 @@ export interface components {
                 radiusM: number;
             } | null;
             placeName: string | null;
+            schedule: components["schemas"]["Schedule"];
             /** Format: uuid */
             batchId: string | null;
             createdAt: string;
         };
+        /** @description Feste Zeiten in Goslarer Ortszeit (Europe/Berlin) */
+        Schedule: {
+            /** @description ISO-Wochentage, 1 = Montag */
+            days: number[];
+            from: string;
+            /** @description Vor „from“ = über Mitternacht */
+            to: string;
+        }[] | null;
         CodeInput: {
             /** Format: uuid */
             achievementId: string;
@@ -3451,6 +3482,7 @@ export interface components {
             } | null;
             /** @description Nur Vorlage place: öffentlicher Name des Ortes auf der Karte */
             placeName?: string | null;
+            schedule?: components["schemas"]["Schedule"];
             count?: number;
         };
         CodePatch: {
@@ -3467,6 +3499,7 @@ export interface components {
             };
             /** @description Nur Ort: umbenennen */
             placeName?: string;
+            schedule?: components["schemas"]["Schedule"];
         };
         PublicAchievement: components["schemas"]["PublicAchievementDetails"] | components["schemas"]["SecretAchievement"];
         PublicAchievementDetails: components["schemas"]["AchievementSummary"] & {
@@ -3482,6 +3515,10 @@ export interface components {
             /** @description Nur Kombination: die Teile */
             items: components["schemas"]["AchievementRef"][];
             publishedAt: string | null;
+            /** @description Zeitfenster: erst ab dann zu verdienen */
+            availableFrom: string | null;
+            /** @description Zeitfenster: nur bis dann zu verdienen */
+            availableUntil: string | null;
         };
         AchievementRef: components["schemas"]["AchievementSummary"] | components["schemas"]["SecretAchievement"];
         AchievementSummary: {
@@ -3843,6 +3880,13 @@ export interface components {
             lng: number;
             radiusM: number;
             validUntil: string | null;
+            /** @description Ende des Zeitfensters des Abzeichens */
+            availableUntil: string | null;
+            schedule: components["schemas"]["Schedule"];
+            /** @description Feste Zeiten lesbar, z. B. „Sa 07:00–13:00“ */
+            scheduleText: string | null;
+            /** @description Gerade innerhalb der festen Zeiten */
+            openNow: boolean;
             achievement: components["schemas"]["AchievementRef"];
             /** @description Mit Anmeldung: hier vorerst nicht mehr möglich (Limit oder Wartezeit). Ohne Anmeldung null. */
             done: boolean | null;

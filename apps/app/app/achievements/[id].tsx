@@ -9,6 +9,7 @@ import { Icon } from '../../src/components/Icon.tsx';
 import { api, unwrap } from '../../src/api.ts';
 import { useAwards } from '../../src/data.ts';
 import { look } from '../../src/badges.ts';
+import { availability } from '../../src/availability.ts';
 import { RARITIES } from '@best-badges/badge-spec';
 import { font, colors, radius } from '../../src/theme.ts';
 
@@ -62,6 +63,17 @@ export default function AchievementDetail() {
           </View>
         )}
         {a.hidden && <Text style={T.label}>Geheimnis gelüftet</Text>}
+        {(() => {
+          const w = availability(a.availableFrom, a.availableUntil);
+          if (!w) return null;
+          const color = w.state === 'running' ? colors.gold : colors.muted;
+          return (
+            <View style={[s.window, { borderColor: color }]} accessibilityLabel={`Zeitraum: ${w.text}`}>
+              <Icon name="clock" size={14} color={color} />
+              <Text style={{ color, fontFamily: font.semibold, fontSize: 13 }}>{w.state === 'running' ? `Limited Edition · ${w.text}` : w.text}</Text>
+            </View>
+          );
+        })()}
         {!!a.description && <Text style={[T.body, { textAlign: 'center', color: colors.muted }]}>{a.description}</Text>}
 
         {collection && (
@@ -136,6 +148,7 @@ export default function AchievementDetail() {
 }
 
 const s = StyleSheet.create({
+  window: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 5 },
   card: { alignSelf: 'stretch', backgroundColor: colors.panel, borderRadius: radius.m, borderWidth: 1, borderColor: colors.line, padding: 16, gap: 10 },
   rarity: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, borderWidth: 1 },
   rarityText: { fontFamily: font.bold, fontSize: 13, letterSpacing: 0.4 },

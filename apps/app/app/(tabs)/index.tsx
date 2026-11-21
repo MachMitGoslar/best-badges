@@ -8,6 +8,7 @@ import { useAuth } from '../../src/auth.ts';
 import { useAwards, usePublicAchievements } from '../../src/data.ts';
 import { look, type PublicAchievement } from '../../src/badges.ts';
 import { font, colors, radius } from '../../src/theme.ts';
+import { availability } from '../../src/availability.ts';
 
 export default function Collection() {
   const auth = useAuth();
@@ -91,8 +92,10 @@ export default function Collection() {
 
 function subtitle(a: PublicAchievement) {
   if (a.secret) return a.hint ? `Hinweis: ${a.hint}` : 'Geheim – finde es selbst heraus';
-  if (a.kind === 'collection') return `Kombination · ${a.requiredCount} von ${a.items.length}`;
-  return a.kind === 'tiered' ? `${a.tiers.length} Stufen` : 'Einzelabzeichen';
+  const base = a.kind === 'collection' ? `Kombination · ${a.requiredCount} von ${a.items.length}` : a.kind === 'tiered' ? `${a.tiers.length} Stufen` : 'Einzelabzeichen';
+  // Zeitfenster (Limited Edition) zuerst, das ist das Dringende
+  const w = availability(a.availableFrom, a.availableUntil);
+  return w ? `${w.text} · ${base}` : base;
 }
 
 function Stat({ value, label }: { value: number; label: string }) {

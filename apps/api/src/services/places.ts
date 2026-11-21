@@ -1,5 +1,6 @@
 import type { Database } from '../db/index.ts';
 import { publicSummary, type PublicSummary } from './publicViews.ts';
+import { describe as describeSchedule, isOpen, type Schedule } from './schedule.ts';
 
 export interface PlaceView {
   id: string;
@@ -8,6 +9,14 @@ export interface PlaceView {
   lng: number;
   radiusM: number;
   validUntil: string | null;
+  /** Ende des Zeitfensters des Abzeichens (Limited Edition) */
+  availableUntil: string | null;
+  /** Feste Zeiten; null = immer */
+  schedule: Schedule | null;
+  /** Lesbar, z. B. „Sa 07:00–13:00“ */
+  scheduleText: string | null;
+  /** Gerade innerhalb der festen Zeiten */
+  openNow: boolean;
   achievement: PublicSummary;
   /** Mit Anmeldung: Die Person kann hier (vorerst) nicht mehr einchecken. Ohne Anmeldung null. */
   done: boolean | null;
@@ -28,12 +37,15 @@ export class PlaceService {
       .innerJoin('achievements', 'achievements.id', 'codes.achievement_id')
       .select([
         'codes.id', 'codes.place_name', 'codes.geo_lat', 'codes.geo_lng', 'codes.geo_radius_m', 'codes.valid_until',
-        'codes.per_user_limit', 'codes.per_user_cooldown_seconds',
+        'codes.per_user_limit', 'codes.per_user_cooldown_seconds', 'codes.schedule', 'achievements.available_until',
         'achievements.id as achievement_id', 'achievements.org_id', 'achievements.name', 'achievements.kind',
         'achievements.spec', 'achievements.hidden', 'achievements.hint',
       ])
       .where('codes.template', '=', 'place').where('codes.active', '=', true)
       .where('achievements.status', '=', 'live').where('achievements.vetoed_at', 'is', null)
+      // Nur Abzeichen in ihrem Zeitfenster
+      .where((eb) => eb.or([eb('achievements.available_from', 'is', null), eb('achievements.available_from', '<=', now)]))
+      .where((eb) => eb.or([eb('achievements.available_until', 'is', null), eb('achievements.available_until', '>', now)]))
       .where((eb) => eb.or([eb('codes.valid_from', 'is', null), eb('codes.valid_from', '<=', now)]))
       .where((eb) => eb.or([eb('codes.valid_until', 'is', null), eb('codes.valid_until', '>', now)]))
       .where((eb) => eb.or([eb('codes.max_total', 'is', null), eb('codes.uses', '<', eb.ref('codes.max_total'))]));
@@ -74,6 +86,10 @@ export class PlaceService {
         lng: r.geo_lng!,
         radiusM: r.geo_radius_m!,
         validUntil: r.valid_until?.toISOString() ?? null,
+        availableUntil: r.available_until?.toISOString() ?? null,
+        schedule: r.schedule,
+        scheduleText: describeSchedule(r.schedule) || null,
+        openNow: isOpen(r.schedule, now.getTime()),
         achievement: publicSummary({ id: r.achievement_id, org_id: r.org_id, name: r.name, kind: r.kind, spec: r.spec, hidden: r.hidden, hint: r.hint }, earned.has(r.achievement_id)),
         done,
       };

@@ -11,6 +11,7 @@ import { useAuth } from '../../src/auth.ts';
 import { look } from '../../src/badges.ts';
 import { setLastResult } from '../../src/data.ts';
 import { checkIn, formatDistance, reachable, usePlaces } from '../../src/places.ts';
+import { availability } from '../../src/availability.ts';
 import { colors } from '../../src/theme.ts';
 
 /** Check-in an einem Ort: zeigt Abzeichen und Entfernung, Einchecken erst im Radius. */
@@ -55,6 +56,7 @@ export default function PlaceScreen() {
 
   let status: string;
   if (place.done) status = 'Hier hast du schon eingecheckt.';
+  else if (!place.openNow) status = `Einchecken nur ${place.scheduleText ?? 'zu bestimmten Zeiten'}.`;
   else if (!permission?.granted) status = 'Zum Einchecken braucht die App deinen Standort.';
   else if (r.distance === null) status = 'Standort wird ermittelt …';
   else if (!r.accurate) status = 'Dein Standort ist noch ungenau. Geh ein paar Schritte ins Freie.';
@@ -68,12 +70,17 @@ export default function PlaceScreen() {
       <Text style={[T.h1, { textAlign: 'center' }]}>{place.name}</Text>
       <Text style={[T.body, { textAlign: 'center' }]}>{a.name}</Text>
       {a.hint && <Text style={[T.body, { textAlign: 'center', color: colors.gold }]}>Hinweis: {a.hint}</Text>}
+      {(place.scheduleText || place.availableUntil) && (
+        <Text style={[T.muted, { textAlign: 'center' }]}>
+          {[place.scheduleText ? `Zeiten: ${place.scheduleText}` : null, availability(null, place.availableUntil)?.text].filter(Boolean).join(' · ')}
+        </Text>
+      )}
       <Text style={[T.muted, { textAlign: 'center', color: r.inRange && !place.done ? colors.ok : colors.muted }]}>{status}</Text>
       {error && <Text style={{ color: colors.danger, textAlign: 'center' }}>{error}</Text>}
       <View style={{ alignSelf: 'stretch', gap: 10, marginTop: 8 }}>
         {permission && !permission.granted
           ? <Button title="Standort freigeben" icon="navigation" onPress={() => void requestPermission()} />
-          : <Button title="Einchecken" icon="map-pin" busy={busy} disabled={place.done === true || !r.inRange || !r.accurate} onPress={() => void go()} />}
+          : <Button title="Einchecken" icon="map-pin" busy={busy} disabled={place.done === true || !place.openNow || !r.inRange || !r.accurate} onPress={() => void go()} />}
         <Button title="Zurück" kind="secondary" onPress={() => router.back()} />
       </View>
     </Screen>

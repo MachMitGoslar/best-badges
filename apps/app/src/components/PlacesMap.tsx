@@ -29,7 +29,7 @@ export function PlacesMap({ places, onSelect }: { places: Place[]; onSelect: (p:
           <Circle key={`${p.id}-r`} center={{ latitude: p.lat, longitude: p.lng }} radius={p.radiusM}
             strokeColor={done ? colors.line : colors.gold} fillColor={done ? 'rgba(255,255,255,0.05)' : 'rgba(245,179,1,0.15)'} strokeWidth={1.5} />,
           <Marker key={p.id} coordinate={{ latitude: p.lat, longitude: p.lng }} title={p.name}
-            description={done ? 'Schon eingecheckt' : 'Antippen zum Einchecken'}
+            description={done ? 'Schon eingecheckt' : !p.openNow ? `Nur ${p.scheduleText ?? 'zu bestimmten Zeiten'}` : 'Antippen zum Einchecken'}
             pinColor={done ? colors.muted : colors.gold} tracksViewChanges={false}
             onCalloutPress={() => onSelect(p)} />,
         ];

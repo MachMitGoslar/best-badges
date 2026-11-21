@@ -15,6 +15,15 @@ import { useAchievement, useCollectionCandidates, useMe, useSaveAchievement, use
 
 type Tab = 'shape' | 'pattern' | 'motif' | 'palette';
 type Kind = 'single' | 'tiered' | 'collection';
+
+/** ISO → Wert für <input type="datetime-local"> in Ortszeit */
+function toLocalInput(iso: string | null | undefined) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+const fromLocalInput = (v: string) => (v ? new Date(v).toISOString() : null);
 type AutoRule = NonNullable<components['schemas']['AutoRule']>;
 
 /** Regeln für Plattform-Abzeichen (nur Haupt-Admin-Organisation) */
@@ -58,6 +67,8 @@ export function EditorPage() {
   const [hint, setHint] = useState('');
   const [openForCollections, setOpenForCollections] = useState(false);
   const [autoRule, setAutoRule] = useState<AutoRule | null>(null);
+  const [availableFrom, setAvailableFrom] = useState('');
+  const [availableUntil, setAvailableUntil] = useState('');
   const me = useMe();
   const isAdminOrg = !!me.data?.adminOrgId && me.data.adminOrgId === orgId;
   const [items, setItems] = useState<string[]>([]);
@@ -80,6 +91,7 @@ export function EditorPage() {
     setSpec(a.spec); setName(a.name); setDescription(a.description); setAwardedText(a.awardedText);
     setKind(a.kind);
     setHidden(a.hidden); setHint(a.hint); setOpenForCollections(a.openForCollections); setAutoRule(a.autoRule);
+    setAvailableFrom(toLocalInput(a.availableFrom)); setAvailableUntil(toLocalInput(a.availableUntil));
     if (a.kind === 'collection') { setItems(a.items.map((i) => i.achievementId)); setRequiredCount(a.requiredCount ?? 2); }
     if (a.kind === 'tiered') setTiers(a.tiers.map((t) => ({ threshold: t.threshold, name: t.name ?? '' })));
     if (a.spec.emblem.motif.type === 'monogram') setMonogram(a.spec.emblem.motif.text);
@@ -130,9 +142,10 @@ export function EditorPage() {
       ...(kind === 'tiered' ? { tiers: tiers.map((t) => ({ threshold: t.threshold, name: t.name.trim() || null })) } : {}),
       ...(kind === 'collection' ? { items, requiredCount } : {}),
       ...(isAdminOrg && kind !== 'collection' ? { autoRule } : {}),
+      availableFrom: fromLocalInput(availableFrom), availableUntil: fromLocalInput(availableUntil),
     };
     // Art, Stufen und Teile lassen sich nur im Entwurf ändern
-    const body = structural ? input : { name: input.name, description: input.description, awardedText: input.awardedText, spec, hidden, hint: hint.trim(), openForCollections } as AchievementInput;
+    const body = structural ? input : { name: input.name, description: input.description, awardedText: input.awardedText, spec, hidden, hint: hint.trim(), openForCollections, availableFrom: input.availableFrom, availableUntil: input.availableUntil } as AchievementInput;
     try {
       const saved = await save.mutateAsync({ id, input: body });
       setMessage({ kind: 'ok', text: 'Gespeichert.' });
@@ -305,6 +318,20 @@ export function EditorPage() {
                   : 'Nur deine Organisation kann dieses Abzeichen in Kombinationen verwenden.'}</p>
               </>
             )}
+          </section>
+
+          <section className="panel stack">
+            <h2>Zeitraum</h2>
+            <p className="muted small" style={{ margin: 0 }}>
+              Optional: Nur in diesem Zeitraum zu verdienen, egal über welchen Code oder Ort – z. B. „Weihnachtsmarkt 2026“.
+              Die App zeigt vorher „ab …“, währenddessen einen Countdown und danach „nicht mehr erhältlich“. Wer es hat, behält es.
+              Lässt sich auch nach dem Veröffentlichen ändern, etwa zum Verlängern.
+            </p>
+            <div className="row">
+              <label className="field">Verfügbar ab<input type="datetime-local" value={availableFrom} disabled={readOnly} onChange={(e) => setAvailableFrom(e.target.value)} /></label>
+              <label className="field">Verfügbar bis<input type="datetime-local" value={availableUntil} disabled={readOnly} onChange={(e) => setAvailableUntil(e.target.value)} /></label>
+            </div>
+            {availableFrom && availableUntil && availableFrom >= availableUntil && <p className="small" style={{ margin: 0, color: 'var(--danger, #f87171)' }}>„Verfügbar bis“ muss nach „Verfügbar ab“ liegen.</p>}
           </section>
 
           {isAdminOrg && (

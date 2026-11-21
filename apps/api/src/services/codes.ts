@@ -5,6 +5,7 @@ import { invalid, notFound } from '../errors.ts';
 import type { AchievementService } from './achievements.ts';
 import { audit } from './audit.ts';
 import { checkoutUrl, eventUrl } from './signing.ts';
+import { scheduleError, type Schedule } from './schedule.ts';
 import { randomSecret, randomToken } from './tokens.ts';
 
 export interface CodeInput {
@@ -20,6 +21,8 @@ export interface CodeInput {
   geo?: { lat: number; lng: number; radiusM: number } | null;
   /** Nur Vorlage `place`: öffentlicher Name des Ortes */
   placeName?: string | null;
+  /** Feste Zeiten (Wochentage + Uhrzeit); null = immer */
+  schedule?: Schedule | null;
   /** Nur für Gutschein-Stapel: Anzahl einmaliger Codes */
   count?: number;
 }
@@ -32,6 +35,7 @@ export interface CodePatch {
   /** Nur Ort: verschieben und umbenennen */
   geo?: { lat: number; lng: number; radiusM: number };
   placeName?: string;
+  schedule?: Schedule | null;
 }
 
 export interface CodeView {
@@ -51,6 +55,7 @@ export interface CodeView {
   active: boolean;
   geo: { lat: number; lng: number; radiusM: number } | null;
   placeName: string | null;
+  schedule: Schedule | null;
   batchId: string | null;
   createdAt: string;
 }
@@ -76,6 +81,11 @@ const TEMPLATES: Record<CodeTemplate, { defaults: Partial<CodeInput>; fixed: Par
 export const PLACE_RADIUS = { min: 30, max: 2000 } as const;
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
+
+function checkSchedule(schedule: Schedule) {
+  const err = scheduleError(schedule);
+  if (err) throw invalid(err);
+}
 
 function checkPlaceRadius(radiusM: number) {
   if (radiusM < PLACE_RADIUS.min || radiusM > PLACE_RADIUS.max) throw invalid(`Der Radius eines Ortes muss zwischen ${PLACE_RADIUS.min} und ${PLACE_RADIUS.max} m liegen`);
@@ -106,6 +116,7 @@ export class CodeService {
       active: c.active,
       geo: c.geo_lat !== null && c.geo_lng !== null && c.geo_radius_m !== null ? { lat: c.geo_lat, lng: c.geo_lng, radiusM: c.geo_radius_m } : null,
       placeName: c.place_name,
+      schedule: c.schedule,
       batchId: c.batch_id,
       createdAt: c.created_at.toISOString(),
     };
@@ -126,6 +137,7 @@ export class CodeService {
       throw invalid('Gültig-bis muss nach Gültig-ab liegen');
     }
     const batchId = input.template === 'voucher' && count > 1 ? randomUUID() : null;
+    if (merged.schedule) checkSchedule(merged.schedule);
     if (input.template === 'place') {
       if (!merged.geo) throw invalid('Ein Ort braucht einen Standort');
       checkPlaceRadius(merged.geo.radiusM);
@@ -152,6 +164,7 @@ export class CodeService {
         geo_lng: merged.geo?.lng ?? null,
         geo_radius_m: merged.geo?.radiusM ?? null,
         place_name: input.template === 'place' ? merged.placeName!.trim() : null,
+        schedule: merged.schedule?.length ? JSON.stringify(merged.schedule) : null,
         batch_id: batchId,
         created_by: actor,
       }))).returningAll().execute();
@@ -193,6 +206,7 @@ export class CodeService {
       throw invalid('Standort und Ortsname lassen sich nur bei Orten ändern');
     }
     if (patch.geo) checkPlaceRadius(patch.geo.radiusM);
+    if (patch.schedule) checkSchedule(patch.schedule);
     if (patch.placeName !== undefined && !patch.placeName.trim()) throw invalid('Ein Ort braucht einen Namen');
     const row = await this.db.transaction().execute(async (trx) => {
       const values: Record<string, unknown> = {};
@@ -202,6 +216,7 @@ export class CodeService {
       if (patch.maxTotal !== undefined) values.max_total = patch.maxTotal;
       if (patch.geo) Object.assign(values, { geo_lat: patch.geo.lat, geo_lng: patch.geo.lng, geo_radius_m: patch.geo.radiusM });
       if (patch.placeName !== undefined) values.place_name = patch.placeName.trim();
+      if (patch.schedule !== undefined) values.schedule = patch.schedule?.length ? JSON.stringify(patch.schedule) : null;
       if (Object.keys(values).length === 0) return current;
       const c = await trx.updateTable('codes').set(values).where('id', '=', id).returningAll().executeTakeFirstOrThrow();
       await audit(trx, { actorSub: actor, orgId, action: 'code.update', entity: 'code', entityId: id, data: { fields: Object.keys(patch) } });

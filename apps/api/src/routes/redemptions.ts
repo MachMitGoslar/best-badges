@@ -65,6 +65,7 @@ const AwardSchema = z.object({
 const STATUS: Record<FailureStatus, 403 | 404 | 409 | 410 | 422> = {
   invalid: 404, inactive: 410, expired: 410, exhausted: 410, unavailable: 410,
   limit_reached: 409, cooldown: 409, out_of_range: 403, implausible: 403, inaccurate: 422,
+  not_started: 409, ended: 410, closed: 409,
 };
 
 /** Antwort auf Einlösen und Check-in: Erfolg mit Seltenheit, sonst Fehler mit passendem HTTP-Status. */

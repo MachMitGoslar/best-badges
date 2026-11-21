@@ -4,6 +4,7 @@ import type { Code, CodeInput } from '@best-badges/api-client';
 import { BadgeView } from '../components/BadgeView.tsx';
 import { Qr } from '../components/Qr.tsx';
 import { PlacePicker, type PlaceValue } from '../components/PlacePicker.tsx';
+import { ScheduleEditor, describeSchedule, type Schedule } from '../components/ScheduleEditor.tsx';
 import { StatusPill } from '../components/StatusPill.tsx';
 import { Icon, type IconName } from '../components/Icon.tsx';
 import { ApiFailure } from '../api.ts';
@@ -29,6 +30,9 @@ function CreateForm({ template, onCreate, onCancel, busy }: { template: Template
   const [geo, setGeo] = useState({ lat: '', lng: '', radiusM: '80' });
   const [place, setPlace] = useState<PlaceValue | null>(null);
   const [placeName, setPlaceName] = useState('');
+  const [useSchedule, setUseSchedule] = useState(false);
+  const [schedule, setSchedule] = useState<Schedule>([{ days: [6], from: '07:00', to: '13:00' }]);
+  const schedulable = template === 'station' || template === 'event' || template === 'place';
 
   function submit() {
     const input: Omit<CodeInput, 'achievementId'> = { template, label: label.trim() };
@@ -40,6 +44,7 @@ function CreateForm({ template, onCreate, onCancel, busy }: { template: Template
     if (template === 'place') { input.geo = place; input.placeName = placeName.trim(); }
     if (template === 'voucher') { input.count = count; input.value = value; }
     if (validUntil) input.validUntil = new Date(validUntil).toISOString();
+    if (schedulable && useSchedule && schedule.length) input.schedule = schedule;
     onCreate(input);
   }
 
@@ -79,6 +84,12 @@ function CreateForm({ template, onCreate, onCancel, busy }: { template: Template
           <label className="field">Wert je Code<input type="number" min={1} max={1000} value={value} onChange={(e) => setValue(Number(e.target.value))} /></label>
         </div>
       )}
+      {schedulable && (
+        <>
+          <label className="row small"><input type="checkbox" checked={useSchedule} onChange={(e) => setUseSchedule(e.target.checked)} /> Nur zu festen Zeiten (z. B. samstags 7–13 Uhr)</label>
+          {useSchedule && <ScheduleEditor value={schedule} onChange={setSchedule} />}
+        </>
+      )}
       {template !== 'checkout' && <label className="field">Gültig bis (optional)<input type="datetime-local" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} /></label>}
       <div className="row">
         <button className="btn btn-primary" disabled={busy || (template === 'place' && (!place || !placeName.trim()))} onClick={submit}>{busy ? 'Legt an …' : 'Anlegen'}</button>
@@ -90,7 +101,7 @@ function CreateForm({ template, onCreate, onCancel, busy }: { template: Template
 
 function usage(c: Code) {
   const per = c.perUserLimit === null ? (c.perUserCooldownSeconds ? 'einmal pro Tag' : 'beliebig oft') : c.perUserLimit === 1 ? 'einmal' : `${c.perUserLimit}×`;
-  return `${c.uses}${c.maxTotal ? ` / ${c.maxTotal}` : ''} eingelöst · pro Person ${per}${c.value > 1 ? ` · Wert ${c.value}` : ''}${c.geo && c.template !== 'place' ? ' · mit Standort' : ''}${c.placeName ? ` · ${c.placeName}, Radius ${c.geo?.radiusM ?? '?'} m` : ''}`;
+  return `${c.uses}${c.maxTotal ? ` / ${c.maxTotal}` : ''} eingelöst · pro Person ${per}${c.value > 1 ? ` · Wert ${c.value}` : ''}${c.geo && c.template !== 'place' ? ' · mit Standort' : ''}${c.placeName ? ` · ${c.placeName}, Radius ${c.geo?.radiusM ?? '?'} m` : ''}${c.schedule?.length ? ` · nur ${describeSchedule(c.schedule)}` : ''}`;
 }
 
 export function CodesPage() {
