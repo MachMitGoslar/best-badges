@@ -187,3 +187,9 @@ textarea { resize: vertical; min-height: 70px; }
   .bb-rays, .bb-beams, .bb-sparkles path { animation: none; }
   .badge-tilt > div, .btn { transition: none; }
 }
+
+/* Ort-Karte (Leaflet, OSM-Kacheln abgedunkelt passend zum dunklen Look) */
+.place-map { height: 320px; border-radius: var(--radius); border: 1px solid var(--line-strong); overflow: hidden; z-index: 0; }
+.place-map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9); }
+.place-map .leaflet-control-attribution { background: rgba(0, 0, 0, 0.6); color: var(--muted); }
+.place-map .leaflet-control-attribution a { color: var(--text); }

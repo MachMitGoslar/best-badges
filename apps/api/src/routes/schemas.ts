@@ -19,6 +19,10 @@ export const TierInputSchema = z.object({
   awardedText: text(500).nullish(),
 });
 
+export const AutoRuleSchema = z.enum(['active_days', 'awards_count', 'orgs_count', 'places_count', 'collections_count']).openapi('AutoRule', {
+  description: 'active_days: Tage mit geöffneter App · awards_count: gesammelte Abzeichen · orgs_count: verschiedene Organisationen · places_count: besuchte Orte · collections_count: geschaffte Kombinationen',
+});
+
 export const AchievementInputSchema = z.object({
   kind: z.enum(['single', 'tiered', 'collection']),
   name: text(80).min(1),
@@ -32,6 +36,7 @@ export const AchievementInputSchema = z.object({
   openForCollections: z.boolean().optional().openapi({ description: 'Andere Organisationen dürfen es für ihre Kombinationen anfragen' }),
   requiredCount: z.number().int().min(1).max(20).optional().openapi({ description: 'Nur Kombination: N von M' }),
   items: z.array(z.string().uuid()).max(20).optional().openapi({ description: 'Nur Kombination: Teil-Abzeichen (2–20)' }),
+  autoRule: AutoRuleSchema.nullish().openapi({ description: 'Plattform-Abzeichen (nur Haupt-Admin-Organisation): automatische Vergabe. Fortschritt = Wert der Kennzahl.' }),
 }).openapi('AchievementInput');
 
 export const AchievementPatchSchema = AchievementInputSchema.partial().openapi('AchievementPatch');
@@ -57,6 +62,7 @@ export const AchievementSchema = z.object({
     achievementId: z.string().uuid(), orgId: z.string().uuid(), name: z.string(), kind: z.enum(['single', 'tiered', 'collection']),
     spec: BadgeSpecSchema, hidden: z.boolean(), state: z.enum(['approved', 'pending', 'rejected']),
   })),
+  autoRule: AutoRuleSchema.nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
   publishedAt: z.string().nullable(),
@@ -125,9 +131,11 @@ const GeoSchema = z.object({
   radiusM: z.number().int().min(10).max(5000),
 });
 
+export const CodeTemplateSchema = z.enum(['station', 'event', 'checkout', 'voucher', 'place']);
+
 export const CodeInputSchema = z.object({
   achievementId: z.string().uuid(),
-  template: z.enum(['station', 'event', 'checkout', 'voucher']),
+  template: CodeTemplateSchema,
   label: text(120).optional(),
   perUserLimit: z.number().int().positive().max(10000).nullish(),
   perUserCooldownSeconds: z.number().int().positive().max(366 * 24 * 3600).nullish(),
@@ -136,6 +144,7 @@ export const CodeInputSchema = z.object({
   validFrom: z.string().datetime({ offset: true }).nullish(),
   validUntil: z.string().datetime({ offset: true }).nullish(),
   geo: GeoSchema.nullish(),
+  placeName: text(80).nullish().openapi({ description: 'Nur Vorlage place: öffentlicher Name des Ortes auf der Karte' }),
   count: z.number().int().min(1).max(500).optional(),
 }).openapi('CodeInput');
 
@@ -144,12 +153,14 @@ export const CodePatchSchema = z.object({
   active: z.boolean().optional(),
   validUntil: z.string().datetime({ offset: true }).nullable().optional(),
   maxTotal: z.number().int().positive().max(1_000_000).nullable().optional(),
+  geo: GeoSchema.optional().openapi({ description: 'Nur Ort: verschieben' }),
+  placeName: text(80).optional().openapi({ description: 'Nur Ort: umbenennen' }),
 }).openapi('CodePatch');
 
 export const CodeSchema = z.object({
   id: z.string().uuid(),
   achievementId: z.string().uuid(),
-  template: z.enum(['station', 'event', 'checkout', 'voucher']),
+  template: CodeTemplateSchema,
   label: z.string(),
   url: z.string().nullable(),
   perUserLimit: z.number().int().nullable(),
@@ -161,6 +172,7 @@ export const CodeSchema = z.object({
   validUntil: z.string().nullable(),
   active: z.boolean(),
   geo: GeoSchema.nullable(),
+  placeName: z.string().nullable(),
   batchId: z.string().uuid().nullable(),
   createdAt: z.string(),
 }).openapi('Code');

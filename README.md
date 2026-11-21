@@ -61,6 +61,15 @@ Anmelden am Mock-OIDC: Login-Seite unter `http://localhost:8080/goslarid/authori
 Als Benutzername `admin` (Haupt-Admin-Org), `waldpfad`, `museum` (Museum + Bibliothek) oder ein beliebiger Name (Bürger ohne Organisation) eingeben.
 Die Testdaten stehen in `dev/mock-hsp/data/hsp.json`.
 
+## Orte und Plattform-Abzeichen
+
+- **Orte** (Vorlage `place`): Einchecken nur über den Standort, ohne Code. In der Verwaltung setzt man den Ort per Karte (OpenStreetMap). In der App zeigt der Reiter „Orte“ eine Karte (Apple Karten), eingecheckt wird im Radius.
+  Der Server prüft Entfernung, Genauigkeit (höchstens 150 m), den vom Gerät gemeldeten vorgetäuschten Standort und unmöglich schnelle Ortswechsel (über ~250 km/h). Der Standort der Person wird nicht gespeichert.
+  Hinweise im Hintergrund sind freiwillig: Das iPhone meldet das Betreten der nächsten 18 offenen Orte per Geofence, die App zeigt eine lokale Mitteilung. Dafür braucht sie Standort „Immer“.
+  Unter Android braucht die Karte `GOOGLE_MAPS_API_KEY` beim Build.
+- **Plattform-Abzeichen**: Nur die Haupt-Admin-Organisation kann einem Abzeichen eine Regel geben (App genutzt, Abzeichen gesammelt, Organisationen, Orte, Kombinationen). Diese Abzeichen werden automatisch vergeben und brauchen keine Codes.
+  Der Fortschritt ist der Wert der Kennzahl, Plattform-Abzeichen zählen selbst nicht mit. Die App meldet beim Öffnen den Tag (nur das Datum, `POST /api/v1/users/me/activity`). Einmal am Tag prüft der Server dabei alle Regeln, so bekommen auch Personen, die schon vorher gesammelt haben, ihre Plattform-Abzeichen.
+
 ## 3D-Medaille auf dem iPhone testen
 
 Ohne Netzwerk, mit eigenem Testbildschirm: [docs/geraetetest-3d.md](docs/geraetetest-3d.md).

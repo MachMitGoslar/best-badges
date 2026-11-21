@@ -7,6 +7,7 @@ import { Button, Screen, T } from '../../src/components/ui.tsx';
 import { useAuth } from '../../src/auth.ts';
 import { saveNotificationSettings, useNotificationSettings, type NotificationPrefs } from '../../src/data.ts';
 import { disablePush, enablePush, pushState, type PushState } from '../../src/push';
+import { disableHints, enableHints, hintState, type HintState } from '../../src/placeHints';
 import { colors, font, radius } from '../../src/theme.ts';
 
 type Key = keyof NotificationPrefs;
@@ -24,10 +25,11 @@ export default function NotificationSettings() {
   const q = useNotificationSettings();
   const qc = useQueryClient();
   const [push, setPush] = useState<PushState | null>(null);
-  const [busy, setBusy] = useState<Key | 'push' | null>(null);
+  const [busy, setBusy] = useState<Key | 'push' | 'hints' | null>(null);
+  const [hints, setHints] = useState<HintState | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
-  useEffect(() => { void pushState().then(setPush); }, []);
+  useEffect(() => { void pushState().then(setPush); void hintState().then(setHints); }, []);
   if (auth.status !== 'signedIn') return <Screen><LoginPrompt /></Screen>;
   const s = q.data;
 
@@ -54,6 +56,17 @@ export default function NotificationSettings() {
     } finally { setBusy(null); }
   };
 
+  const toggleHints = async (on: boolean) => {
+    setBusy('hints'); setMsg(null);
+    try {
+      if (on && !(await enableHints())) setMsg('Für Hinweise an Orten braucht Best Badges den Standort „Immer“ und Mitteilungen. Beides lässt sich in den iPhone-Einstellungen erlauben.');
+      if (!on) await disableHints();
+      setHints(await hintState());
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally { setBusy(null); }
+  };
+
   return (
     <Screen>
       <Stack.Screen options={{ title: 'Benachrichtigungen' }} />
@@ -73,6 +86,22 @@ export default function NotificationSettings() {
               trackColor={{ true: colors.gold }} accessibilityLabel="Push auf diesem iPhone" />
           </View>
           {push === 'denied' && <Button title="iPhone-Einstellungen öffnen" kind="secondary" icon="external-link" onPress={() => void Linking.openSettings()} />}
+        </View>
+
+        <View style={st.card}>
+          <View style={st.row}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={st.title}>Hinweise an Orten</Text>
+              <Text style={T.muted}>
+                {hints === 'unsupported' ? 'Auf diesem Gerät nicht verfügbar.'
+                  : hints === 'denied' ? 'Standort „Immer“ ist in den iPhone-Einstellungen nicht erlaubt.'
+                  : 'Die App meldet sich, wenn du in die Nähe eines Ortes kommst – auch geschlossen. Das erkennt das iPhone selbst, dein Standort wird dafür nicht übertragen.'}
+              </Text>
+            </View>
+            <Switch value={hints === 'on'} disabled={busy !== null || hints === 'unsupported'} onValueChange={(v) => void toggleHints(v)}
+              trackColor={{ true: colors.gold }} accessibilityLabel="Hinweise an Orten" />
+          </View>
+          {hints === 'denied' && <Button title="iPhone-Einstellungen öffnen" kind="secondary" icon="external-link" onPress={() => void Linking.openSettings()} />}
         </View>
 
         <Text style={T.label}>Worüber du informiert wirst</Text>

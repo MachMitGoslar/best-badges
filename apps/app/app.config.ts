@@ -21,7 +21,8 @@ const config: ExpoConfig = {
       NSAppTransportSecurity: { NSAllowsLocalNetworking: true },
     },
   },
-  android: { package: 'de.machmitgoslar.bestbadges.dev' },
+  // Karten unter Android brauchen einen Google-Maps-Schlüssel (GOOGLE_MAPS_API_KEY); unter iOS Apple Karten ohne Schlüssel
+  android: { package: 'de.machmitgoslar.bestbadges.dev', ...(process.env.GOOGLE_MAPS_API_KEY ? { config: { googleMaps: { apiKey: process.env.GOOGLE_MAPS_API_KEY } } } : {}) },
   plugins: [
     'expo-router',
     'expo-secure-store',
@@ -30,6 +31,14 @@ const config: ExpoConfig = {
     './plugins/withMetroIpOutput',
     // Nur Erlaubnis, Geräte-Token und Antippen – Versand direkt über Apple (APNs), nicht über Expo
     ['expo-notifications', { mode: apnsEnvironment, enableBackgroundRemoteNotifications: false }],
+    // Orte: Standort beim Einchecken; „Immer“ nur für Hinweise per Geofence (freiwillig).
+    // Kein UIBackgroundModes „location“: Geofencing braucht keine laufende Ortung im Hintergrund.
+    ['expo-location', {
+      locationWhenInUsePermission: 'Best Badges braucht deinen Standort, um zu prüfen, ob du an einem Ort bist, und um dir Orte in der Nähe zu zeigen.',
+      locationAlwaysAndWhenInUsePermission: 'Wenn du es erlaubst, meldet sich Best Badges, sobald du in der Nähe eines Ortes bist – auch wenn die App geschlossen ist. Dein Standort bleibt auf dem Handy.',
+      isIosBackgroundLocationEnabled: false,
+      isAndroidBackgroundLocationEnabled: true,
+    }],
   ],
   experiments: { typedRoutes: false },
 };

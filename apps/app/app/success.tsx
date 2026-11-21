@@ -41,7 +41,7 @@ export default function Success() {
         glow.value = withSequence(withTiming(1, { duration: 120 }), withTiming(0, { duration: 700 }));
         setShownTier(r.tier);
       }
-      if (r.tierUp || r.firstTime || r.collections.some((c) => c.firstTime)) {
+      if (r.tierUp || r.firstTime || r.collections.some((c) => c.firstTime) || (r.bonus ?? []).length > 0) {
         setBurst((b) => b + 1);
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
@@ -95,6 +95,16 @@ export default function Success() {
               <Text style={[T.body, { fontFamily: font.bold }]} numberOfLines={1}>{look(c.achievement).name}</Text>
               {!c.completed && <ProgressBar value={c.progress} max={c.requiredCount} />}
               {!c.completed && <Text style={T.muted}>{c.progress} von {c.requiredCount} Teilen</Text>}
+            </View>
+          </Pressable>
+        ))}
+        {(r.bonus ?? []).map((b) => (
+          <Pressable key={b.achievement.id} style={[cs.combo, cs.comboDone]} onPress={() => { router.dismissAll(); router.push(`/achievements/${b.achievement.id}`); }}>
+            <Badge spec={look(b.achievement).spec} size={56} tier={b.tierCount > 1 ? b.tier : undefined} tierCount={b.tierCount > 1 ? b.tierCount : undefined} title={look(b.achievement).name} />
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={[T.label, { color: colors.gold }]}>{b.firstTime ? 'Bonus-Abzeichen!' : `Bonus · Stufe ${b.tier}`}</Text>
+              <Text style={[T.body, { fontFamily: font.bold }]} numberOfLines={1}>{look(b.achievement).name}</Text>
+              {!!b.awardedText && <Text style={T.muted} numberOfLines={2}>{b.awardedText}</Text>}
             </View>
           </Pressable>
         ))}

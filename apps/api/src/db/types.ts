@@ -18,6 +18,8 @@ export interface AchievementsTable {
   hidden: Generated<boolean>;
   hint: Generated<string>;
   open_for_collections: Generated<boolean>;
+  /** Plattform-Abzeichen: automatische Vergabe nach Regel (nur Haupt-Admin-Organisation) */
+  auto_rule: Generated<AutoRule | null>;
   vetoed_at: NullableTimestamp;
   vetoed_by: string | null;
   veto_reason: string | null;
@@ -25,6 +27,13 @@ export interface AchievementsTable {
   created_at: CreatedAt;
   updated_at: UpdatedAt;
   published_at: NullableTimestamp;
+}
+
+export type AutoRule = 'active_days' | 'awards_count' | 'orgs_count' | 'places_count' | 'collections_count';
+
+export interface UserActivityDaysTable {
+  user_sub: string;
+  day: ColumnType<string, string, string>;
 }
 
 export interface AchievementTiersTable {
@@ -54,7 +63,7 @@ export interface CollectionItemsTable {
   position: Generated<number>;
 }
 
-export type CodeTemplate = 'station' | 'event' | 'checkout' | 'voucher';
+export type CodeTemplate = 'station' | 'event' | 'checkout' | 'voucher' | 'place';
 
 export interface CodesTable {
   id: Generated<string>;
@@ -75,6 +84,8 @@ export interface CodesTable {
   geo_lat: number | null;
   geo_lng: number | null;
   geo_radius_m: number | null;
+  /** Nur Vorlage `place`: öffentlicher Name des Ortes */
+  place_name: Generated<string | null>;
   batch_id: string | null;
   created_by: string;
   created_at: CreatedAt;
@@ -90,7 +101,7 @@ export interface AwardsTable {
   updated_at: UpdatedAt;
 }
 
-export type RedemptionStatus = 'success' | 'limit_reached' | 'cooldown' | 'expired' | 'exhausted' | 'inactive' | 'invalid' | 'unavailable' | 'out_of_range';
+export type RedemptionStatus = 'success' | 'limit_reached' | 'cooldown' | 'expired' | 'exhausted' | 'inactive' | 'invalid' | 'unavailable' | 'out_of_range' | 'inaccurate' | 'implausible';
 
 export interface CodeNoncesTable {
   code_id: string;
@@ -106,7 +117,7 @@ export interface RedemptionsTable {
   user_sub: string;
   value: Generated<number>;
   status: RedemptionStatus;
-  source: Generated<'scan' | 'api'>;
+  source: Generated<'scan' | 'api' | 'place'>;
   api_key_id: Generated<string | null>;
   reference: Generated<string | null>;
   created_at: CreatedAt;
@@ -222,6 +233,7 @@ export interface DB {
   notifications: NotificationsTable;
   push_outbox: PushOutboxTable;
   org_members_seen: OrgMembersSeenTable;
+  user_activity_days: UserActivityDaysTable;
 }
 
 export type Achievement = Selectable<AchievementsTable>;

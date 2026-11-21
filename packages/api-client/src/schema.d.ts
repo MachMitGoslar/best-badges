@@ -2450,6 +2450,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/me/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** App geöffnet: Tag vermerken (nur das Datum) und Plattform-Abzeichen prüfen – einmal pro Tag wirksam */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Vermerkt */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            bonus: components["schemas"]["BonusUnlock"][];
+                        };
+                    };
+                };
+                /** @description Nicht angemeldet */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/me/awards": {
         parameters: {
             query?: never;
@@ -2491,6 +2538,161 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/places": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Orte zum Einchecken (mit Anmeldung inkl. eigenem Stand) */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Kartenausschnitt: minLng,minLat,maxLng,maxLat */
+                    bbox?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Orte */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["Place"][];
+                        };
+                    };
+                };
+                /** @description Ungültige Eingabe */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/places/{id}/checkins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** An einem Ort einchecken (Standort wird geprüft, aber nicht gespeichert) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CheckInInput"];
+                };
+            };
+            responses: {
+                /** @description Eingecheckt */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RedeemSuccess"];
+                    };
+                };
+                /** @description Nicht angemeldet */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Zu weit entfernt oder unplausibler Standort */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RedeemFailure"];
+                    };
+                };
+                /** @description Ort unbekannt */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RedeemFailure"];
+                    };
+                };
+                /** @description Limit pro Person erreicht oder Wartezeit läuft */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RedeemFailure"];
+                    };
+                };
+                /** @description Ort abgelaufen, inaktiv, ausgeschöpft oder Abzeichen nicht verfügbar */
+                410: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RedeemFailure"];
+                    };
+                };
+                /** @description Standort zu ungenau oder ungültige Eingabe */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RedeemFailure"];
+                    };
+                };
+                /** @description Zu viele Versuche */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -2963,6 +3165,11 @@ export interface components {
             name: string | null;
             email: string | null;
             isPlatformAdmin: boolean;
+            /**
+             * Format: uuid
+             * @description Nur für Mitglieder der Haupt-Admin-Organisation: deren ID (Plattform-Abzeichen, Rundschreiben)
+             */
+            adminOrgId: string | null;
             organisations: {
                 /** Format: uuid */
                 id: string;
@@ -3074,10 +3281,16 @@ export interface components {
                 /** @enum {string} */
                 state: "approved" | "pending" | "rejected";
             }[];
+            autoRule: components["schemas"]["AutoRule"];
             createdAt: string;
             updatedAt: string;
             publishedAt: string | null;
         };
+        /**
+         * @description active_days: Tage mit geöffneter App · awards_count: gesammelte Abzeichen · orgs_count: verschiedene Organisationen · places_count: besuchte Orte · collections_count: geschaffte Kombinationen
+         * @enum {string|null}
+         */
+        AutoRule: "active_days" | "awards_count" | "orgs_count" | "places_count" | "collections_count" | null;
         AchievementInput: {
             /** @enum {string} */
             kind: "single" | "tiered" | "collection";
@@ -3128,6 +3341,11 @@ export interface components {
             requiredCount?: number;
             /** @description Nur Kombination: Teil-Abzeichen (2–20) */
             items?: string[];
+            /**
+             * @description Plattform-Abzeichen (nur Haupt-Admin-Organisation): automatische Vergabe. Fortschritt = Wert der Kennzahl.
+             * @enum {string|null}
+             */
+            autoRule?: "active_days" | "awards_count" | "orgs_count" | "places_count" | "collections_count" | null;
         };
         AchievementPatch: {
             /** @enum {string} */
@@ -3179,6 +3397,11 @@ export interface components {
             requiredCount?: number;
             /** @description Nur Kombination: Teil-Abzeichen (2–20) */
             items?: string[];
+            /**
+             * @description Plattform-Abzeichen (nur Haupt-Admin-Organisation): automatische Vergabe. Fortschritt = Wert der Kennzahl.
+             * @enum {string|null}
+             */
+            autoRule?: "active_days" | "awards_count" | "orgs_count" | "places_count" | "collections_count" | null;
         };
         Code: {
             /** Format: uuid */
@@ -3186,7 +3409,7 @@ export interface components {
             /** Format: uuid */
             achievementId: string;
             /** @enum {string} */
-            template: "station" | "event" | "checkout" | "voucher";
+            template: "station" | "event" | "checkout" | "voucher" | "place";
             label: string;
             url: string | null;
             perUserLimit: number | null;
@@ -3202,6 +3425,7 @@ export interface components {
                 lng: number;
                 radiusM: number;
             } | null;
+            placeName: string | null;
             /** Format: uuid */
             batchId: string | null;
             createdAt: string;
@@ -3210,7 +3434,7 @@ export interface components {
             /** Format: uuid */
             achievementId: string;
             /** @enum {string} */
-            template: "station" | "event" | "checkout" | "voucher";
+            template: "station" | "event" | "checkout" | "voucher" | "place";
             label?: string;
             perUserLimit?: number | null;
             perUserCooldownSeconds?: number | null;
@@ -3225,6 +3449,8 @@ export interface components {
                 lng: number;
                 radiusM: number;
             } | null;
+            /** @description Nur Vorlage place: öffentlicher Name des Ortes auf der Karte */
+            placeName?: string | null;
             count?: number;
         };
         CodePatch: {
@@ -3233,6 +3459,14 @@ export interface components {
             /** Format: date-time */
             validUntil?: string | null;
             maxTotal?: number | null;
+            /** @description Nur Ort: verschieben */
+            geo?: {
+                lat: number;
+                lng: number;
+                radiusM: number;
+            };
+            /** @description Nur Ort: umbenennen */
+            placeName?: string;
         };
         PublicAchievement: components["schemas"]["PublicAchievementDetails"] | components["schemas"]["SecretAchievement"];
         PublicAchievementDetails: components["schemas"]["AchievementSummary"] & {
@@ -3536,6 +3770,8 @@ export interface components {
             awardedText: string;
             /** @description Kombinationen, die durch diese Einlösung vorankommen */
             collections: components["schemas"]["CollectionUnlock"][];
+            /** @description Plattform-Abzeichen, die dadurch dazukamen oder aufstiegen */
+            bonus: components["schemas"]["BonusUnlock"][];
             /**
              * @description Seltenheit der erreichten Stufe aus dem Anteil der Sammelnden der Organisation (common, rare, epic, legendary); null ohne Stufe oder bei Platzhaltern
              * @enum {string|null}
@@ -3548,6 +3784,16 @@ export interface components {
             requiredCount: number;
             completed: boolean;
             firstTime: boolean;
+        };
+        /** @description Plattform-Abzeichen, das automatisch dazukam oder aufstieg */
+        BonusUnlock: {
+            achievement: components["schemas"]["AchievementRef"];
+            progress: number;
+            tier: number;
+            tierCount: number;
+            tierUp: boolean;
+            firstTime: boolean;
+            awardedText: string;
         };
         RedeemFailure: components["schemas"]["Error"] & {
             retryAfterSeconds?: number;
@@ -3566,7 +3812,7 @@ export interface components {
             message: string | null;
             achievement: components["schemas"]["AchievementRef"];
             /** @enum {string|null} */
-            template: "station" | "event" | "checkout" | "voucher" | null;
+            template: "station" | "event" | "checkout" | "voucher" | "place" | null;
             value: number | null;
             award: {
                 progress: number;
@@ -3588,6 +3834,28 @@ export interface components {
             rarity: "common" | "rare" | "epic" | "legendary" | null;
             firstEarnedAt: string | null;
             updatedAt: string;
+        };
+        Place: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            lat: number;
+            lng: number;
+            radiusM: number;
+            validUntil: string | null;
+            achievement: components["schemas"]["AchievementRef"];
+            /** @description Mit Anmeldung: hier vorerst nicht mehr möglich (Limit oder Wartezeit). Ohne Anmeldung null. */
+            done: boolean | null;
+        };
+        CheckInInput: {
+            geo: {
+                lat: number;
+                lng: number;
+                /** @description Genauigkeit laut Gerät in Metern; über 150 m wird nicht eingecheckt */
+                accuracyM: number;
+                /** @description Gerät meldet vorgetäuschten Standort (Android) */
+                mocked?: boolean;
+            };
         };
         ApiKey: {
             /** Format: uuid */

@@ -752,6 +752,13 @@
             },
             "description": "Kombinationen, die durch diese Einlösung vorankommen"
           },
+          "bonus": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BonusUnlock"
+            },
+            "description": "Plattform-Abzeichen, die dadurch dazukamen oder aufstiegen"
+          },
           "rarity": {
             "type": [
               "string",
@@ -780,6 +787,7 @@
           "nextThreshold",
           "awardedText",
           "collections",
+          "bonus",
           "rarity"
         ]
       },
@@ -809,6 +817,42 @@
           "completed",
           "firstTime"
         ]
+      },
+      "BonusUnlock": {
+        "type": "object",
+        "properties": {
+          "achievement": {
+            "$ref": "#/components/schemas/AchievementRef"
+          },
+          "progress": {
+            "type": "integer"
+          },
+          "tier": {
+            "type": "integer"
+          },
+          "tierCount": {
+            "type": "integer"
+          },
+          "tierUp": {
+            "type": "boolean"
+          },
+          "firstTime": {
+            "type": "boolean"
+          },
+          "awardedText": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "achievement",
+          "progress",
+          "tier",
+          "tierCount",
+          "tierUp",
+          "firstTime",
+          "awardedText"
+        ],
+        "description": "Plattform-Abzeichen, das automatisch dazukam oder aufstieg"
       },
       "RedeemFailure": {
         "allOf": [
@@ -891,6 +935,7 @@
               "event",
               "checkout",
               "voucher",
+              "place",
               null
             ]
           },
@@ -990,6 +1035,91 @@
           "rarity",
           "firstEarnedAt",
           "updatedAt"
+        ]
+      },
+      "Place": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "radiusM": {
+            "type": "integer"
+          },
+          "validUntil": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "achievement": {
+            "$ref": "#/components/schemas/AchievementRef"
+          },
+          "done": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Mit Anmeldung: hier vorerst nicht mehr möglich (Limit oder Wartezeit). Ohne Anmeldung null."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "lat",
+          "lng",
+          "radiusM",
+          "validUntil",
+          "achievement",
+          "done"
+        ]
+      },
+      "CheckInInput": {
+        "type": "object",
+        "properties": {
+          "geo": {
+            "type": "object",
+            "properties": {
+              "lat": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "lng": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              },
+              "accuracyM": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 10000,
+                "description": "Genauigkeit laut Gerät in Metern; über 150 m wird nicht eingecheckt"
+              },
+              "mocked": {
+                "type": "boolean",
+                "description": "Gerät meldet vorgetäuschten Standort (Android)"
+              }
+            },
+            "required": [
+              "lat",
+              "lng",
+              "accuracyM"
+            ]
+          }
+        },
+        "required": [
+          "geo"
         ]
       },
       "DirectAwardResult": {
@@ -1943,6 +2073,52 @@
         }
       }
     },
+    "/api/v1/users/me/activity": {
+      "post": {
+        "tags": [
+          "Sammlung"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "App geöffnet: Tag vermerken (nur das Datum) und Plattform-Abzeichen prüfen – einmal pro Tag wirksam",
+        "responses": {
+          "200": {
+            "description": "Vermerkt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bonus": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BonusUnlock"
+                      }
+                    }
+                  },
+                  "required": [
+                    "bonus"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/users/me/awards": {
       "get": {
         "tags": [
@@ -1978,6 +2154,177 @@
           },
           "401": {
             "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/places": {
+      "get": {
+        "tags": [
+          "Orte"
+        ],
+        "summary": "Orte zum Einchecken (mit Anmeldung inkl. eigenem Stand)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^-?\\d+(\\.\\d+)?(,-?\\d+(\\.\\d+)?){3}$",
+              "description": "Kartenausschnitt: minLng,minLat,maxLng,maxLat",
+              "example": "10.38,51.88,10.48,51.93"
+            },
+            "required": false,
+            "description": "Kartenausschnitt: minLng,minLat,maxLng,maxLat",
+            "name": "bbox",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Orte",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Place"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ungültige Eingabe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/places/{id}/checkins": {
+      "post": {
+        "tags": [
+          "Orte"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "An einem Ort einchecken (Standort wird geprüft, aber nicht gespeichert)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckInInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Eingecheckt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemSuccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Zu weit entfernt oder unplausibler Standort",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ort unbekannt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Limit pro Person erreicht oder Wartezeit läuft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemFailure"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Ort abgelaufen, inaktiv, ausgeschöpft oder Abzeichen nicht verfügbar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemFailure"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Standort zu ungenau oder ungültige Eingabe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemFailure"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Zu viele Versuche",
             "content": {
               "application/json": {
                 "schema": {
