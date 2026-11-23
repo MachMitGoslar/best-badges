@@ -691,6 +691,9 @@
           "poi": {
             "$ref": "#/components/schemas/PoiRef"
           },
+          "countWindow": {
+            "type": "boolean"
+          },
           "createdAt": {
             "type": "string"
           },
@@ -726,6 +729,7 @@
           "availableFrom",
           "availableUntil",
           "poi",
+          "countWindow",
           "createdAt",
           "updatedAt",
           "publishedAt"
@@ -1100,6 +1104,10 @@
             "maxLength": 100,
             "description": "Gehört diesem POI der Organisation; leer = der ganzen Organisation"
           },
+          "countWindow": {
+            "type": "boolean",
+            "description": "Plattform-Abzeichen mit Zeitraum: nur zählen, was im Zeitraum passiert ist"
+          },
           "autoRule": {
             "type": [
               "string",
@@ -1440,6 +1448,10 @@
             "minLength": 1,
             "maxLength": 100,
             "description": "Gehört diesem POI der Organisation; leer = der ganzen Organisation"
+          },
+          "countWindow": {
+            "type": "boolean",
+            "description": "Plattform-Abzeichen mit Zeitraum: nur zählen, was im Zeitraum passiert ist"
           },
           "autoRule": {
             "type": [

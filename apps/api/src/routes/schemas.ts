@@ -47,6 +47,7 @@ export const AchievementInputSchema = z.object({
   availableFrom: z.string().datetime({ offset: true }).nullish().openapi({ description: 'Zeitfenster: erst ab dann zu verdienen' }),
   availableUntil: z.string().datetime({ offset: true }).nullish().openapi({ description: 'Zeitfenster: nur bis dann zu verdienen (Limited Edition)' }),
   poiId: z.string().min(1).max(100).nullish().openapi({ description: 'Gehört diesem POI der Organisation; leer = der ganzen Organisation' }),
+  countWindow: z.boolean().optional().openapi({ description: 'Plattform-Abzeichen mit Zeitraum: nur zählen, was im Zeitraum passiert ist' }),
   autoRule: AutoRuleSchema.nullish().openapi({ description: 'Plattform-Abzeichen (nur Haupt-Admin-Organisation): automatische Vergabe. Fortschritt = Wert der Kennzahl.' }),
 }).openapi('AchievementInput');
 
@@ -77,6 +78,7 @@ export const AchievementSchema = z.object({
   availableFrom: z.string().nullable(),
   availableUntil: z.string().nullable(),
   poi: PoiRefSchema.nullable(),
+  countWindow: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
   publishedAt: z.string().nullable(),

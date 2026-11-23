@@ -69,6 +69,8 @@ export function EditorPage() {
   const [autoRule, setAutoRule] = useState<AutoRule | null>(null);
   const [availableFrom, setAvailableFrom] = useState('');
   const [poiId, setPoiId] = useState<string | null>(null);
+  // Plattform-Abzeichen mit Zeitraum: nur zählen, was im Zeitraum passiert ist (Standard für neue)
+  const [countWindow, setCountWindow] = useState(true);
   const pois = useOrgPois(orgId);
   const [availableUntil, setAvailableUntil] = useState('');
   const me = useMe();
@@ -93,7 +95,7 @@ export function EditorPage() {
     setSpec(a.spec); setName(a.name); setDescription(a.description); setAwardedText(a.awardedText);
     setKind(a.kind);
     setHidden(a.hidden); setHint(a.hint); setOpenForCollections(a.openForCollections); setAutoRule(a.autoRule);
-    setAvailableFrom(toLocalInput(a.availableFrom)); setAvailableUntil(toLocalInput(a.availableUntil)); setPoiId(a.poi?.id ?? null);
+    setAvailableFrom(toLocalInput(a.availableFrom)); setAvailableUntil(toLocalInput(a.availableUntil)); setPoiId(a.poi?.id ?? null); setCountWindow(a.countWindow);
     if (a.kind === 'collection') { setItems(a.items.map((i) => i.achievementId)); setRequiredCount(a.requiredCount ?? 2); }
     if (a.kind === 'tiered') setTiers(a.tiers.map((t) => ({ threshold: t.threshold, name: t.name ?? '' })));
     if (a.spec.emblem.motif.type === 'monogram') setMonogram(a.spec.emblem.motif.text);
@@ -146,6 +148,7 @@ export function EditorPage() {
       ...(isAdminOrg && kind !== 'collection' ? { autoRule } : {}),
       availableFrom: fromLocalInput(availableFrom), availableUntil: fromLocalInput(availableUntil),
       ...(isAdminOrg && autoRule ? {} : { poiId }),
+      ...(isAdminOrg && kind !== 'collection' ? { countWindow: !!autoRule && !!(availableFrom || availableUntil) && countWindow } : {}),
     };
     // Art, Stufen und Teile lassen sich nur im Entwurf ändern
     const body = structural ? input : { name: input.name, description: input.description, awardedText: input.awardedText, spec, hidden, hint: hint.trim(), openForCollections, availableFrom: input.availableFrom, availableUntil: input.availableUntil, ...(input.poiId !== undefined ? { poiId: input.poiId } : {}) } as AchievementInput;
@@ -376,6 +379,20 @@ export function EditorPage() {
                 </select>
               </label>
               {kind === 'collection' && <p className="muted small" style={{ margin: 0 }}>Kombinationen lassen sich nicht automatisch vergeben.</p>}
+              {autoRule && (availableFrom || availableUntil) && (
+                <>
+                  <div className="panel-title" style={{ marginBottom: 0, marginTop: 8 }}>
+                    <h3 style={{ margin: 0 }}>Was zählt?</h3>
+                    <div className="seg" role="group" aria-label="Was zählt?">
+                      <button aria-pressed={countWindow} disabled={!structural} onClick={() => setCountWindow(true)}>Nur im Zeitraum</button>
+                      <button aria-pressed={!countWindow} disabled={!structural} onClick={() => setCountWindow(false)}>Alles bisher</button>
+                    </div>
+                  </div>
+                  <p className="muted small" style={{ margin: 0 }}>{countWindow
+                    ? 'Gezählt wird nur, was im Zeitraum passiert – z. B. „5 neue Abzeichen im Advent“. Was vorher gesammelt wurde, zählt nicht.'
+                    : 'Gezählt wird alles bisher. Der Zeitraum legt nur fest, wann man das Abzeichen bekommen kann – z. B. „bis Silvester insgesamt 20 gesammelt“.'}</p>
+                </>
+              )}
             </section>
           )}
 

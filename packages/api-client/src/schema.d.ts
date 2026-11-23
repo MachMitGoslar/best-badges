@@ -3408,6 +3408,7 @@ export interface components {
             availableFrom: string | null;
             availableUntil: string | null;
             poi: components["schemas"]["PoiRef"];
+            countWindow: boolean;
             createdAt: string;
             updatedAt: string;
             publishedAt: string | null;
@@ -3487,6 +3488,8 @@ export interface components {
             availableUntil?: string | null;
             /** @description Gehört diesem POI der Organisation; leer = der ganzen Organisation */
             poiId?: string | null;
+            /** @description Plattform-Abzeichen mit Zeitraum: nur zählen, was im Zeitraum passiert ist */
+            countWindow?: boolean;
             /**
              * @description Plattform-Abzeichen (nur Haupt-Admin-Organisation): automatische Vergabe. Fortschritt = Wert der Kennzahl.
              * @enum {string|null}
@@ -3555,6 +3558,8 @@ export interface components {
             availableUntil?: string | null;
             /** @description Gehört diesem POI der Organisation; leer = der ganzen Organisation */
             poiId?: string | null;
+            /** @description Plattform-Abzeichen mit Zeitraum: nur zählen, was im Zeitraum passiert ist */
+            countWindow?: boolean;
             /**
              * @description Plattform-Abzeichen (nur Haupt-Admin-Organisation): automatische Vergabe. Fortschritt = Wert der Kennzahl.
              * @enum {string|null}
