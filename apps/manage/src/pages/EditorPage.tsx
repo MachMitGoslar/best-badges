@@ -11,7 +11,7 @@ const Badge3D = lazy(() => import('../components/Badge3D.tsx').then((m) => ({ de
 import { StatusPill } from '../components/StatusPill.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { ApiFailure } from '../api.ts';
-import { useAchievement, useCollectionCandidates, useMe, useSaveAchievement, useTransition } from '../hooks.ts';
+import { useAchievement, useCollectionCandidates, useMe, useOrgPois, useSaveAchievement, useTransition } from '../hooks.ts';
 
 type Tab = 'shape' | 'pattern' | 'motif' | 'palette';
 type Kind = 'single' | 'tiered' | 'collection';
@@ -68,6 +68,8 @@ export function EditorPage() {
   const [openForCollections, setOpenForCollections] = useState(false);
   const [autoRule, setAutoRule] = useState<AutoRule | null>(null);
   const [availableFrom, setAvailableFrom] = useState('');
+  const [poiId, setPoiId] = useState<string | null>(null);
+  const pois = useOrgPois(orgId);
   const [availableUntil, setAvailableUntil] = useState('');
   const me = useMe();
   const isAdminOrg = !!me.data?.adminOrgId && me.data.adminOrgId === orgId;
@@ -91,7 +93,7 @@ export function EditorPage() {
     setSpec(a.spec); setName(a.name); setDescription(a.description); setAwardedText(a.awardedText);
     setKind(a.kind);
     setHidden(a.hidden); setHint(a.hint); setOpenForCollections(a.openForCollections); setAutoRule(a.autoRule);
-    setAvailableFrom(toLocalInput(a.availableFrom)); setAvailableUntil(toLocalInput(a.availableUntil));
+    setAvailableFrom(toLocalInput(a.availableFrom)); setAvailableUntil(toLocalInput(a.availableUntil)); setPoiId(a.poi?.id ?? null);
     if (a.kind === 'collection') { setItems(a.items.map((i) => i.achievementId)); setRequiredCount(a.requiredCount ?? 2); }
     if (a.kind === 'tiered') setTiers(a.tiers.map((t) => ({ threshold: t.threshold, name: t.name ?? '' })));
     if (a.spec.emblem.motif.type === 'monogram') setMonogram(a.spec.emblem.motif.text);
@@ -143,9 +145,10 @@ export function EditorPage() {
       ...(kind === 'collection' ? { items, requiredCount } : {}),
       ...(isAdminOrg && kind !== 'collection' ? { autoRule } : {}),
       availableFrom: fromLocalInput(availableFrom), availableUntil: fromLocalInput(availableUntil),
+      ...(isAdminOrg && autoRule ? {} : { poiId }),
     };
     // Art, Stufen und Teile lassen sich nur im Entwurf ändern
-    const body = structural ? input : { name: input.name, description: input.description, awardedText: input.awardedText, spec, hidden, hint: hint.trim(), openForCollections, availableFrom: input.availableFrom, availableUntil: input.availableUntil } as AchievementInput;
+    const body = structural ? input : { name: input.name, description: input.description, awardedText: input.awardedText, spec, hidden, hint: hint.trim(), openForCollections, availableFrom: input.availableFrom, availableUntil: input.availableUntil, ...(input.poiId !== undefined ? { poiId: input.poiId } : {}) } as AchievementInput;
     try {
       const saved = await save.mutateAsync({ id, input: body });
       setMessage({ kind: 'ok', text: 'Gespeichert.' });
@@ -319,6 +322,31 @@ export function EditorPage() {
               </>
             )}
           </section>
+
+          {!autoRule && (
+            <section className="panel stack">
+              <div className="panel-title" style={{ marginBottom: 0 }}>
+                <h2>Gehört zu</h2>
+                <div className="seg" role="group" aria-label="Gehört zu">
+                  <button aria-pressed={poiId === null} disabled={readOnly} onClick={() => setPoiId(null)}>Ganze Organisation</button>
+                  <button aria-pressed={poiId !== null} disabled={readOnly || !pois.data?.length} onClick={() => setPoiId(poiId ?? pois.data?.[0]?.id ?? null)}>Einem Ort</button>
+                </div>
+              </div>
+              {poiId === null ? (
+                <p className="muted small" style={{ margin: 0 }}>Gilt für die ganze Organisation, z. B. „Kaffee bei uns“ – egal in welcher Filiale.{pois.data && !pois.data.length ? ' Im HSP sind für deine Organisation keine Orte hinterlegt.' : ''}</p>
+              ) : (
+                <>
+                  <label className="field">Ort aus dem HSP
+                    <select value={poiId} disabled={readOnly} onChange={(e) => setPoiId(e.target.value)}>
+                      {!pois.data?.some((p) => p.id === poiId) && <option value={poiId}>{a?.poi?.name ?? 'Unbekannter Ort'} (nicht mehr im HSP)</option>}
+                      {pois.data?.map((p) => <option key={p.id} value={p.id}>{p.name}{p.address ? ` · ${p.address}` : ''}</option>)}
+                    </select>
+                  </label>
+                  <p className="muted small" style={{ margin: 0 }}>Die App zeigt das Abzeichen mit Name und Adresse dieses Ortes und auf der Karte. Neue Orte-Check-ins übernehmen seinen Standort.</p>
+                </>
+              )}
+            </section>
+          )}
 
           <section className="panel stack">
             <h2>Zeitraum</h2>

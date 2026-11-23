@@ -6,7 +6,7 @@ import { PlacesMap } from '../../src/components/PlacesMap';
 import { Icon } from '../../src/components/Icon.tsx';
 import { Screen, T } from '../../src/components/ui.tsx';
 import { useAuth } from '../../src/auth.ts';
-import { usePlaces } from '../../src/places.ts';
+import { usePlaces, usePois } from '../../src/places.ts';
 import { enableHints, hintState, syncHints, type HintState } from '../../src/placeHints';
 import { colors, font, radius } from '../../src/theme.ts';
 
@@ -14,6 +14,7 @@ import { colors, font, radius } from '../../src/theme.ts';
 export default function MapTab() {
   const auth = useAuth();
   const places = usePlaces();
+  const pois = usePois();
   const [permission, requestPermission] = Location.useForegroundPermissions();
   const [hints, setHints] = useState<HintState | null>(null);
   const [dismissed, setDismissed] = useState(false);
@@ -23,6 +24,7 @@ export default function MapTab() {
   // Bei jedem Öffnen: Liste auffrischen und die nächstgelegenen offenen Orte für Hinweise anmelden
   useFocusEffect(useCallback(() => {
     void places.refetch();
+    void pois.refetch();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []));
   useEffect(() => {
@@ -38,7 +40,8 @@ export default function MapTab() {
 
   return (
     <Screen>
-      <PlacesMap places={places.data ?? []} onSelect={(p) => router.push(`/places/${p.id}`)} />
+      <PlacesMap places={places.data ?? []} pois={pois.data ?? []} onSelect={(p) => router.push(`/places/${p.id}`)}
+        onSelectPoi={(p) => router.push(`/pois/${encodeURIComponent(p.id)}`)} />
       <View style={s.overlay} pointerEvents="box-none">
         {permission && !permission.granted && (
           <Card icon="navigation" title="Standort freigeben" text="Damit du siehst, wo du bist, und an Orten einchecken kannst." onPress={() => void requestPermission()} />
@@ -48,7 +51,7 @@ export default function MapTab() {
             text="Die App meldet sich, sobald du in der Nähe eines Ortes bist – auch wenn sie geschlossen ist. Dein Standort bleibt auf dem Handy."
             onPress={() => void turnOnHints()} />
         )}
-        {places.data?.length === 0 && <Card icon="map" title="Noch keine Orte" text="Sobald Organisationen Orte anlegen, erscheinen sie hier." />}
+        {places.data?.length === 0 && pois.data?.length === 0 && <Card icon="map" title="Noch keine Orte" text="Sobald Organisationen Orte anlegen, erscheinen sie hier." />}
       </View>
     </Screen>
   );

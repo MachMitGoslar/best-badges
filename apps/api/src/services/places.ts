@@ -17,6 +17,8 @@ export interface PlaceView {
   scheduleText: string | null;
   /** Gerade innerhalb der festen Zeiten */
   openNow: boolean;
+  /** Ort hängt an diesem POI */
+  poiId: string | null;
   achievement: PublicSummary;
   /** Mit Anmeldung: Die Person kann hier (vorerst) nicht mehr einchecken. Ohne Anmeldung null. */
   done: boolean | null;
@@ -37,7 +39,7 @@ export class PlaceService {
       .innerJoin('achievements', 'achievements.id', 'codes.achievement_id')
       .select([
         'codes.id', 'codes.place_name', 'codes.geo_lat', 'codes.geo_lng', 'codes.geo_radius_m', 'codes.valid_until',
-        'codes.per_user_limit', 'codes.per_user_cooldown_seconds', 'codes.schedule', 'achievements.available_until',
+        'codes.per_user_limit', 'codes.per_user_cooldown_seconds', 'codes.schedule', 'codes.poi_id', 'achievements.available_until',
         'achievements.id as achievement_id', 'achievements.org_id', 'achievements.name', 'achievements.kind',
         'achievements.spec', 'achievements.hidden', 'achievements.hint',
       ])
@@ -90,6 +92,7 @@ export class PlaceService {
         schedule: r.schedule,
         scheduleText: describeSchedule(r.schedule) || null,
         openNow: isOpen(r.schedule, now.getTime()),
+        poiId: r.poi_id,
         achievement: publicSummary({ id: r.achievement_id, org_id: r.org_id, name: r.name, kind: r.kind, spec: r.spec, hidden: r.hidden, hint: r.hint }, earned.has(r.achievement_id)),
         done,
       };

@@ -1,4 +1,4 @@
-// Mock des HSP-Organisationsportals. Bildet genau die drei Endpunkte nach,
+// Mock des HSP-Organisationsportals. Bildet genau die Endpunkte nach,
 // die die Badge-API nutzt. Keine Abhängigkeiten, nur für die lokale Entwicklung.
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
@@ -44,6 +44,16 @@ createServer((req, res) => {
   if (parts[0] === 'api' && parts[1] === 'UserProfiles' && parts[3] === 'Memberships' && parts.length === 4) {
     const user = Object.values(data.users).find((u) => u.id === parts[2]);
     return send(res, 200, (user?.memberships ?? []).map((organisationId) => ({ organisationId })));
+  }
+
+  // /api/Organisations/{id}/PointsOfInterest
+  if (parts[0] === 'api' && parts[1] === 'Organisations' && parts[3] === 'PointsOfInterest' && parts.length === 4) {
+    return send(res, 200, (data.pointsOfInterest ?? []).filter((p) => p.organisationId === parts[2]));
+  }
+
+  // /api/Organisations/{orgId}/PointsOfInterest/{id}/OpeningHours  (dayOfWeek wie .NET: 0 = Sonntag)
+  if (parts[0] === 'api' && parts[1] === 'Organisations' && parts[3] === 'PointsOfInterest' && parts[5] === 'OpeningHours' && parts.length === 6) {
+    return send(res, 200, (data.openingHours ?? []).filter((h) => h.pointOfInterestId === parts[4]));
   }
 
   // /api/Organisations/{id}

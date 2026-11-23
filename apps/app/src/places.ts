@@ -8,6 +8,17 @@ import { api, unwrap } from './api.ts';
 import { useAuth } from './auth.ts';
 
 export type Place = components['schemas']['Place'];
+export type PublicPoi = components['schemas']['PublicPoi'];
+
+/** POI (Geschäfte, Filialen) mit gerade verfügbaren Abzeichen */
+export const usePois = () => {
+  const auth = useAuth();
+  return useQuery({
+    queryKey: ['pois', auth.status],
+    enabled: auth.status !== 'loading',
+    queryFn: async () => (await unwrap(api.GET('/api/v1/pois'))).items,
+  });
+};
 
 export const usePlaces = () => {
   const auth = useAuth();

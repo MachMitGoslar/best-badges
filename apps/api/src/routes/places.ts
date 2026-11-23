@@ -17,6 +17,7 @@ const PlaceSchema = z.object({
   schedule: ScheduleSchema.nullable(),
   scheduleText: z.string().nullable().openapi({ description: 'Feste Zeiten lesbar, z. B. „Sa 07:00–13:00“' }),
   openNow: z.boolean().openapi({ description: 'Gerade innerhalb der festen Zeiten' }),
+  poiId: z.string().nullable().openapi({ description: 'Ort hängt an diesem POI (siehe /api/v1/pois)' }),
   achievement: PublicSummarySchema,
   done: z.boolean().nullable().openapi({ description: 'Mit Anmeldung: hier vorerst nicht mehr möglich (Limit oder Wartezeit). Ohne Anmeldung null.' }),
 }).openapi('Place');

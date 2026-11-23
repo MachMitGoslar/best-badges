@@ -87,6 +87,7 @@ export default function RootLayout() {
           <Stack.Screen name="redeem" options={{ presentation: 'modal', title: 'Abzeichen einlösen' }} />
           <Stack.Screen name="success" options={{ presentation: 'fullScreenModal', headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="places/[id]" options={{ presentation: 'modal', title: 'Ort' }} />
+          <Stack.Screen name="pois/[id]" options={{ title: '' }} />
           <Stack.Screen name="c/[token]" options={{ headerShown: false }} />
           <Stack.Screen name="u/[handle]" options={{ title: 'Profil' }} />
           <Stack.Screen name="notifications" options={{ title: 'Mitteilungen' }} />

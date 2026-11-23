@@ -7,7 +7,7 @@ import type { NotificationService } from '../services/notifications.ts';
 import type { Config } from '../config.ts';
 import { createDb, type Database } from '../db/index.ts';
 import { migrate } from '../db/migrate.ts';
-import type { OrgDirectory } from '../orgDirectory.ts';
+import type { HspPoi, OrgDirectory } from '../orgDirectory.ts';
 
 export const ISS = 'http://issuer.test/goslarid';
 export const ADMIN_ORG = '00000000-0000-4000-8000-000000000001';
@@ -17,7 +17,15 @@ export const MUSEUM_ORG = '00000000-0000-4000-8000-000000000003';
 /** Testbenutzer → Organisationen */
 const MEMBERS: Record<string, string[]> = { admin: [ADMIN_ORG], waldpfad: [WALD_ORG], museum: [MUSEUM_ORG] };
 
+/** POI je Organisation im Test-HSP; Tests dürfen den Inhalt ändern. `hspDown` simuliert einen Ausfall. */
+export const testPois: Record<string, HspPoi[]> = {};
+export const hspState = { down: false };
+
 export const directory: OrgDirectory = {
+  async listPointsOfInterest(orgId) {
+    if (hspState.down) throw new Error('HSP nicht erreichbar');
+    return structuredClone(testPois[orgId] ?? []);
+  },
   async lookupUser(sub) {
     return { hspProfileId: `p-${sub}`, displayName: sub.toUpperCase(), organisationIds: MEMBERS[sub] ?? [] };
   },

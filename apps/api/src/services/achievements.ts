@@ -1,7 +1,8 @@
 import { BadgeSpecSchema, type BadgeSpec } from '@best-badges/badge-spec';
 import type { Transaction } from 'kysely';
 import type { Database } from '../db/index.ts';
-import type { Achievement, AutoRule, DB, Tier } from '../db/types.ts';
+import type { Achievement, AutoRule, DB, Poi, Tier } from '../db/types.ts';
+import { poiRef, type PoiRef, type PoiService } from './pois.ts';
 import { ApiError, conflict, invalid, notFound } from '../errors.ts';
 import { audit } from './audit.ts';
 import { evaluateCollections } from './collections.ts';
@@ -32,6 +33,8 @@ export interface AchievementInput {
   /** Zeitfenster (ISO) */
   availableFrom?: string | null;
   availableUntil?: string | null;
+  /** Optional: gehört diesem POI der Organisation (sonst der ganzen Organisation) */
+  poiId?: string | null;
 }
 
 export type ItemState = 'approved' | 'pending' | 'rejected';
@@ -73,6 +76,8 @@ export interface AchievementView {
   autoRule: AutoRule | null;
   availableFrom: string | null;
   availableUntil: string | null;
+  /** Gehört diesem POI (Name, Adresse, Koordinaten) – sonst der ganzen Organisation */
+  poi: PoiRef | null;
   createdAt: string;
   updatedAt: string;
   publishedAt: string | null;
@@ -89,7 +94,7 @@ type ItemRow = { collection_id: string; achievement_id: string; approved_at: Dat
 
 const stateOf = (r: Pick<ItemRow, 'approved_at' | 'rejected_at'>): ItemState => (r.approved_at ? 'approved' : r.rejected_at ? 'rejected' : 'pending');
 
-export function toView(a: Achievement, tiers: Tier[], items: ItemRow[] = []): AchievementView {
+export function toView(a: Achievement, tiers: Tier[], items: ItemRow[] = [], pois: Map<string, Poi> = new Map()): AchievementView {
   return {
     id: a.id,
     orgId: a.org_id,
@@ -118,6 +123,7 @@ export function toView(a: Achievement, tiers: Tier[], items: ItemRow[] = []): Ac
     autoRule: a.auto_rule,
     availableFrom: iso(a.available_from),
     availableUntil: iso(a.available_until),
+    poi: a.poi_id && pois.get(a.poi_id) ? poiRef(pois.get(a.poi_id)!) : null,
     createdAt: a.created_at.toISOString(),
     updatedAt: a.updated_at.toISOString(),
     publishedAt: iso(a.published_at),
@@ -145,6 +151,7 @@ export function present(v: AchievementView, earned: Set<string>): PublicAchievem
     publishedAt: v.publishedAt,
     availableFrom: v.availableFrom,
     availableUntil: v.availableUntil,
+    poi: v.poi,
   };
 }
 
@@ -169,7 +176,13 @@ function normalizeTiers(kind: AchievementInput['kind'], tiers: TierInput[] | und
 type Trx = Transaction<DB>;
 
 export class AchievementService {
-  constructor(private db: Database, private now: () => number = Date.now, private notifications?: NotificationService, private adminOrgId?: string) {}
+  constructor(private db: Database, private now: () => number = Date.now, private notifications?: NotificationService, private adminOrgId?: string, private pois?: PoiService) {}
+
+  private async checkPoi(orgId: string, poiId: string | null | undefined) {
+    if (!poiId) return;
+    if (!this.pois) throw invalid('POI sind nicht verfügbar');
+    await this.pois.requireOwned(orgId, poiId);
+  }
 
   /** Regeln für Plattform-Abzeichen darf nur die Haupt-Admin-Organisation setzen, nicht für Kombinationen. */
   private checkAutoRule(orgId: string, kind: Achievement['kind'], rule: AutoRule | null | undefined) {
@@ -220,8 +233,14 @@ export class AchievementService {
 
   private async views(rows: Achievement[]): Promise<AchievementView[]> {
     const ids = rows.map((r) => r.id);
-    const [tiers, items] = await Promise.all([this.tiersFor(ids), this.itemsFor(rows.filter((r) => r.kind === 'collection').map((r) => r.id))]);
-    return rows.map((r) => toView(r, tiers, items));
+    const poiIds = [...new Set(rows.map((r) => r.poi_id).filter((x): x is string => !!x))];
+    const [tiers, items, poiRows] = await Promise.all([
+      this.tiersFor(ids),
+      this.itemsFor(rows.filter((r) => r.kind === 'collection').map((r) => r.id)),
+      poiIds.length ? this.db.selectFrom('pois').selectAll().where('id', 'in', poiIds).execute() : Promise.resolve([]),
+    ]);
+    const pois = new Map(poiRows.map((p) => [p.id, p]));
+    return rows.map((r) => toView(r, tiers, items, pois));
   }
 
   private async load(orgId: string, id: string): Promise<Achievement> {
@@ -301,6 +320,7 @@ export class AchievementService {
     const tiers = normalizeTiers(input.kind, input.tiers, input.requiredCount);
     this.checkAutoRule(orgId, input.kind, input.autoRule);
     checkWindow(input.availableFrom ?? null, input.availableUntil ?? null);
+    await this.checkPoi(orgId, input.poiId);
     const row = await this.db.transaction().execute(async (trx) => {
       if (isCollection) await this.checkItems(trx, orgId, null, input.items, input.requiredCount);
       const a = await trx.insertInto('achievements').values({
@@ -318,6 +338,7 @@ export class AchievementService {
         auto_rule: input.autoRule ?? null,
         available_from: input.availableFrom ?? null,
         available_until: input.availableUntil ?? null,
+        poi_id: input.poiId ?? null,
         vetoed_at: null, vetoed_by: null, veto_reason: null, published_at: null,
         created_by: actor,
       }).returningAll().executeTakeFirstOrThrow();
@@ -342,6 +363,8 @@ export class AchievementService {
       patch.availableFrom !== undefined ? patch.availableFrom : iso(current.available_from),
       patch.availableUntil !== undefined ? patch.availableUntil : iso(current.available_until),
     );
+    // Zuordnung zum POI lässt sich jederzeit ändern (z. B. Filiale zieht um)
+    if (patch.poiId !== undefined && patch.poiId !== current.poi_id) await this.checkPoi(orgId, patch.poiId);
     const row = await this.db.transaction().execute(async (trx) => {
       const values: Record<string, unknown> = { updated_at: new Date(this.now()) };
       if (patch.name !== undefined) values.name = patch.name;
@@ -355,6 +378,7 @@ export class AchievementService {
       // Zeitfenster lässt sich jederzeit ändern (z. B. Aktion verlängern)
       if (patch.availableFrom !== undefined) values.available_from = patch.availableFrom;
       if (patch.availableUntil !== undefined) values.available_until = patch.availableUntil;
+      if (patch.poiId !== undefined) values.poi_id = patch.poiId;
       if (patch.spec !== undefined) values.spec = JSON.stringify(BadgeSpecSchema.parse(patch.spec));
       if (structural) {
         const kind = patch.kind ?? current.kind;

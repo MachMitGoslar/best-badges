@@ -47,6 +47,14 @@ export function useTransition(orgId: string) {
   });
 }
 
+/** POI der Organisation aus dem HSP (beim Abruf frisch geholt) */
+export const useOrgPois = (orgId: string) =>
+  useQuery({
+    queryKey: ['pois', orgId],
+    queryFn: async () => (await unwrap(api.GET('/api/v1/orgs/{orgId}/pois', { params: { path: { orgId } } }))).items,
+    staleTime: 60_000,
+  });
+
 export const useCodes = (orgId: string, achievementId: string) =>
   useQuery({
     queryKey: ['codes', orgId, achievementId],

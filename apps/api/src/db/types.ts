@@ -24,6 +24,8 @@ export interface AchievementsTable {
   /** Zeitfenster: nur in diesem Zeitraum zu verdienen (Limited Edition) */
   available_from: ColumnType<Date | null, Date | string | null | undefined, Date | string | null>;
   available_until: ColumnType<Date | null, Date | string | null | undefined, Date | string | null>;
+  /** Optional: gehört diesem POI der Organisation */
+  poi_id: Generated<string | null>;
   vetoed_at: NullableTimestamp;
   vetoed_by: string | null;
   veto_reason: string | null;
@@ -34,6 +36,22 @@ export interface AchievementsTable {
 }
 
 export type AutoRule = 'active_days' | 'awards_count' | 'orgs_count' | 'places_count' | 'collections_count';
+
+export interface PoisTable {
+  id: string;
+  org_id: string;
+  name: string;
+  street: string | null;
+  house_number: string | null;
+  zip_code: string | null;
+  city: string | null;
+  category: string | null;
+  lat: number;
+  lng: number;
+  opening_hours: ColumnType<Schedule | null, string | null, string | null>;
+  fetched_at: ColumnType<Date, Date | string | undefined, Date | string>;
+  removed_at: ColumnType<Date | null, Date | string | null | undefined, Date | string | null>;
+}
 
 export interface UserActivityDaysTable {
   user_sub: string;
@@ -92,6 +110,8 @@ export interface CodesTable {
   place_name: Generated<string | null>;
   /** Feste Zeiten (Wochentage + Uhrzeit, Europe/Berlin); null = immer */
   schedule: ColumnType<Schedule | null, string | null | undefined, string | null>;
+  /** Optional: Code oder Ort hängt an diesem POI */
+  poi_id: Generated<string | null>;
   batch_id: string | null;
   created_by: string;
   created_at: CreatedAt;
@@ -240,6 +260,7 @@ export interface DB {
   push_outbox: PushOutboxTable;
   org_members_seen: OrgMembersSeenTable;
   user_activity_days: UserActivityDaysTable;
+  pois: PoisTable;
 }
 
 export type Achievement = Selectable<AchievementsTable>;
@@ -247,3 +268,4 @@ export type NewAchievement = Insertable<AchievementsTable>;
 export type AchievementUpdate = Updateable<AchievementsTable>;
 export type Tier = Selectable<AchievementTiersTable>;
 export type Code = Selectable<CodesTable>;
+export type Poi = Selectable<PoisTable>;

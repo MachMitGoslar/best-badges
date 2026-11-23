@@ -63,6 +63,15 @@ export default function AchievementDetail() {
           </View>
         )}
         {a.hidden && <Text style={T.label}>Geheimnis gelüftet</Text>}
+        {a.poi && (
+          <Pressable onPress={() => router.push(`/pois/${encodeURIComponent(a.poi!.id)}`)} accessibilityRole="button" accessibilityLabel={`Ort: ${a.poi.name}`} style={s.poi}>
+            <Icon name="map-pin" size={16} color={colors.gold} />
+            <View style={{ flexShrink: 1 }}>
+              <Text style={{ color: colors.text, fontFamily: font.semibold }}>{a.poi.name}</Text>
+              {!!a.poi.address && <Text style={T.muted}>{a.poi.address}</Text>}
+            </View>
+          </Pressable>
+        )}
         {(() => {
           const w = availability(a.availableFrom, a.availableUntil);
           if (!w) return null;
@@ -148,6 +157,7 @@ export default function AchievementDetail() {
 }
 
 const s = StyleSheet.create({
+  poi: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.m, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.line },
   window: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 5 },
   card: { alignSelf: 'stretch', backgroundColor: colors.panel, borderRadius: radius.m, borderWidth: 1, borderColor: colors.line, padding: 16, gap: 10 },
   rarity: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, borderWidth: 1 },
