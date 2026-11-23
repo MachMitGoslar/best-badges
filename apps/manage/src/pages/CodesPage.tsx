@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import type { Code, CodeInput } from '@best-badges/api-client';
 import { BadgeView } from '../components/BadgeView.tsx';
@@ -8,7 +8,7 @@ import { ScheduleEditor, describeSchedule, type Schedule } from '../components/S
 import { StatusPill } from '../components/StatusPill.tsx';
 import { Icon, type IconName } from '../components/Icon.tsx';
 import { ApiFailure } from '../api.ts';
-import { useAchievement, useCodeAction, useCodes, useCreateCode } from '../hooks.ts';
+import { useAchievement, useCodeAction, useCodes, useCreateCode, useOrgPois } from '../hooks.ts';
 
 type Template = CodeInput['template'];
 
@@ -20,12 +20,15 @@ const TEMPLATES: Record<Template, { icon: IconName; title: string; text: string 
   place: { icon: 'mapPin', title: 'Ort', text: 'Ganz ohne Code: Wer in der App vor Ort ist, checkt ein. Der Ort erscheint auf der Karte. Gut für Einstiegs-Abzeichen.' },
 };
 
-function CreateForm({ template, onCreate, onCancel, busy }: { template: Template; onCreate: (i: Omit<CodeInput, 'achievementId'>) => void; onCancel: () => void; busy: boolean }) {
+function CreateForm({ orgId, defaultPoiId, template, onCreate, onCancel, busy }: { orgId: string; defaultPoiId: string | null; template: Template; onCreate: (i: Omit<CodeInput, 'achievementId'>) => void; onCancel: () => void; busy: boolean }) {
+  const pois = useOrgPois(orgId);
+  const [poiId, setPoiId] = useState<string>('');
   const [label, setLabel] = useState('');
   const [repeat, setRepeat] = useState<'once' | 'daily' | 'unlimited'>('once');
   const [count, setCount] = useState(20);
   const [value, setValue] = useState(1);
   const [validUntil, setValidUntil] = useState('');
+  const [validFrom, setValidFrom] = useState('');
   const [useGeo, setUseGeo] = useState(false);
   const [geo, setGeo] = useState({ lat: '', lng: '', radiusM: '80' });
   const [place, setPlace] = useState<PlaceValue | null>(null);
@@ -33,6 +36,22 @@ function CreateForm({ template, onCreate, onCancel, busy }: { template: Template
   const [useSchedule, setUseSchedule] = useState(false);
   const [schedule, setSchedule] = useState<Schedule>([{ days: [6], from: '07:00', to: '13:00' }]);
   const schedulable = template === 'station' || template === 'event' || template === 'place';
+  const poiable = template === 'station' || template === 'place';
+  const selectedPoi = pois.data?.find((p) => p.id === poiId) ?? null;
+
+  /** POI wählen: Ort und Name übernehmen (Radius 60 m), bei Stationen die Standortprüfung vorbelegen */
+  function choosePoi(id: string) {
+    setPoiId(id);
+    const p = pois.data?.find((x) => x.id === id);
+    if (!p) return;
+    if (template === 'place') { setPlace({ lat: p.lat, lng: p.lng, radiusM: place?.radiusM ?? 60 }); setPlaceName(p.name.slice(0, 80)); }
+    if (template === 'station') setGeo({ lat: String(p.lat), lng: String(p.lng), radiusM: geo.radiusM });
+  }
+  // Abzeichen eines POI: diesen POI vorschlagen, sobald die Liste da ist
+  useEffect(() => {
+    if (poiable && defaultPoiId && !poiId && pois.data?.some((p) => p.id === defaultPoiId)) choosePoi(defaultPoiId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pois.data, defaultPoiId]);
 
   function submit() {
     const input: Omit<CodeInput, 'achievementId'> = { template, label: label.trim() };
@@ -44,6 +63,8 @@ function CreateForm({ template, onCreate, onCancel, busy }: { template: Template
     if (template === 'place') { input.geo = place; input.placeName = placeName.trim(); }
     if (template === 'voucher') { input.count = count; input.value = value; }
     if (validUntil) input.validUntil = new Date(validUntil).toISOString();
+    if (validFrom) input.validFrom = new Date(validFrom).toISOString();
+    if (poiable && poiId) input.poiId = poiId;
     if (schedulable && useSchedule && schedule.length) input.schedule = schedule;
     onCreate(input);
   }
@@ -52,6 +73,20 @@ function CreateForm({ template, onCreate, onCancel, busy }: { template: Template
     <div className="panel stack">
       <h2 className="row"><Icon name={TEMPLATES[template].icon} size={22} /> {TEMPLATES[template].title}</h2>
       <label className="field">Bezeichnung (nur für dich)<input value={label} maxLength={120} onChange={(e) => setLabel(e.target.value)} placeholder={template === 'station' ? 'z. B. Station 3: Ameisenhaufen' : 'z. B. Sommerfest 2027'} /></label>
+      {poiable && (
+        <label className="field">Ort aus dem HSP (optional)
+          <select value={poiId} onChange={(e) => choosePoi(e.target.value)} disabled={pois.isPending}>
+            <option value="">{pois.isPending ? 'Lade Orte …' : pois.data?.length ? 'Keiner – Ort selbst festlegen' : 'Keine Orte im HSP hinterlegt'}</option>
+            {pois.data?.map((p) => <option key={p.id} value={p.id}>{p.name}{p.address ? ` · ${p.address}` : ''}</option>)}
+          </select>
+        </label>
+      )}
+      {selectedPoi?.openingHours && schedulable && (
+        <div className="row small">
+          <span className="muted">Öffnungszeiten laut HSP: {selectedPoi.openingHoursText}</span>
+          <button type="button" className="btn btn-sm" onClick={() => { setSchedule(selectedPoi.openingHours!); setUseSchedule(true); }}>Als feste Zeiten übernehmen</button>
+        </div>
+      )}
       {template === 'place' && (
         <>
           <label className="field">Name des Ortes (öffentlich auf der Karte)<input value={placeName} maxLength={80} onChange={(e) => setPlaceName(e.target.value)} placeholder="z. B. Kaiserpfalz" /></label>
@@ -90,7 +125,12 @@ function CreateForm({ template, onCreate, onCancel, busy }: { template: Template
           {useSchedule && <ScheduleEditor value={schedule} onChange={setSchedule} />}
         </>
       )}
-      {template !== 'checkout' && <label className="field">Gültig bis (optional)<input type="datetime-local" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} /></label>}
+      {template !== 'checkout' && (
+        <div className="row">
+          <label className="field">Gültig ab (optional)<input type="datetime-local" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} /></label>
+          <label className="field">Gültig bis (optional)<input type="datetime-local" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} /></label>
+        </div>
+      )}
       <div className="row">
         <button className="btn btn-primary" disabled={busy || (template === 'place' && (!place || !placeName.trim()))} onClick={submit}>{busy ? 'Legt an …' : 'Anlegen'}</button>
         <button className="btn btn-ghost" onClick={onCancel}>Abbrechen</button>
@@ -167,7 +207,7 @@ export function CodesPage() {
 
       {a.autoRule && <div className="notice" style={{ marginBottom: 16 }}>Plattform-Abzeichen werden automatisch nach ihrer Regel vergeben und brauchen keine Codes.</div>}
       {a.status !== 'archived' && !a.autoRule && (template ? (
-        <CreateForm template={template} busy={create.isPending} onCreate={(i) => void onCreate(i)} onCancel={() => setTemplate(null)} />
+        <CreateForm orgId={orgId} defaultPoiId={a.poi?.id ?? null} template={template} busy={create.isPending} onCreate={(i) => void onCreate(i)} onCancel={() => setTemplate(null)} />
       ) : (
         <section className="stack" style={{ marginBottom: 24 }}>
           <h2>Neuer Code</h2>

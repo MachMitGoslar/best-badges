@@ -47,6 +47,8 @@ export function PlacePicker({ value, onChange }: { value: PlaceValue | null; onC
     else circle.current.setLatLng(at).setRadius(value.radiusM);
     if (!dot.current) dot.current = L.circleMarker(at, { ...style, radius: 6, fillOpacity: 1 }).addTo(m);
     else dot.current.setLatLng(at);
+    // Von außen gesetzt (z. B. aus einem POI): Karte dorthin schieben, wenn der Punkt nicht im Blick ist
+    if (!m.getBounds().contains(at)) m.setView(at, Math.max(m.getZoom(), 17));
   }, [value]);
 
   function locate() {

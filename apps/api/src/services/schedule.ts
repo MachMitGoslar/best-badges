@@ -59,6 +59,35 @@ function daysText(days: number[]): string {
   return out.join(', ');
 }
 
+/**
+ * Öffnungszeiten aus dem HSP (.NET: dayOfWeek 0 = Sonntag, Zeiten „HH:mm:ss“) in feste Zeiten umrechnen.
+ * Gleiche Uhrzeiten an mehreren Tagen werden zu einem Zeitfenster zusammengefasst.
+ */
+export function fromHspOpeningHours(hours: { dayOfWeek?: number | null; from?: string | null; to?: string | null }[]): Schedule | null {
+  const slots = new Map<string, Set<number>>();
+  for (const h of hours) {
+    const from = hhmm(h.from), to = hhmm(h.to);
+    if (h.dayOfWeek == null || h.dayOfWeek < 0 || h.dayOfWeek > 6 || !from || !to || from === to) continue;
+    const day = h.dayOfWeek === 0 ? 7 : h.dayOfWeek;
+    const key = `${from}-${to}`;
+    slots.set(key, (slots.get(key) ?? new Set()).add(day));
+  }
+  if (slots.size === 0) return null;
+  return [...slots.entries()]
+    .map(([key, days]) => ({ days: [...days].sort((a, b) => a - b), from: key.slice(0, 5), to: key.slice(6) }))
+    .sort((a, b) => a.days[0]! - b.days[0]! || a.from.localeCompare(b.from))
+    .slice(0, 14);
+}
+
+/** „10:00:00“, „10:00“ oder „1.10:00:00“ (TimeSpan) → „10:00“ */
+function hhmm(v: string | null | undefined): string | null {
+  const m = /(?:^|\.)(\d{1,2}):(\d{2})(?::\d{2})?/.exec(v ?? '');
+  if (!m) return null;
+  const h = Number(m[1]), min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  return `${String(h).padStart(2, '0')}:${m[2]}`;
+}
+
 /** Prüft Form und Werte; liefert eine Fehlermeldung oder null. */
 export function scheduleError(schedule: Schedule): string | null {
   if (schedule.length > 14) return 'Höchstens 14 Zeitfenster';

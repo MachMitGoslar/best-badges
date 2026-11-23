@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import MapView, { Circle, Marker, type Region } from 'react-native-maps';
-import type { Place } from '../places.ts';
+import type { Place, PublicPoi } from '../places.ts';
 import { colors } from '../theme.ts';
 
 /** Goslar Altstadt */
@@ -11,7 +11,7 @@ const GOSLAR: Region = { latitude: 51.9059, longitude: 10.429, latitudeDelta: 0.
  * Karte mit Orten (Apple Karten unter iOS, dunkel). Gold = offen, gedämpft = erledigt.
  * Der Kreis zeigt, wie nah man zum Einchecken heran muss.
  */
-export function PlacesMap({ places, onSelect }: { places: Place[]; onSelect: (p: Place) => void }) {
+export function PlacesMap({ places, pois = [], onSelect, onSelectPoi }: { places: Place[]; pois?: PublicPoi[]; onSelect: (p: Place) => void; onSelectPoi?: (p: PublicPoi) => void }) {
   const initial = useMemo(() => GOSLAR, []);
   return (
     <MapView
@@ -34,6 +34,14 @@ export function PlacesMap({ places, onSelect }: { places: Place[]; onSelect: (p:
             onCalloutPress={() => onSelect(p)} />,
         ];
       })}
+      {pois
+        // POI, an denen schon ein Check-in-Ort hängt, zeigt dessen Pin
+        .filter((poi) => !places.some((p) => p.poiId === poi.id))
+        .map((poi) => (
+          <Marker key={`poi-${poi.id}`} coordinate={{ latitude: poi.lat, longitude: poi.lng }} title={poi.name}
+            description={`${poi.achievements.length} ${poi.achievements.length === 1 ? 'Abzeichen' : 'Abzeichen'} · Antippen für mehr`}
+            pinColor={colors.nebula ?? '#8b7cf6'} tracksViewChanges={false} onCalloutPress={() => onSelectPoi?.(poi)} />
+        ))}
     </MapView>
   );
 }

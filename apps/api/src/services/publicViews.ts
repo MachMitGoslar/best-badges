@@ -31,6 +31,8 @@ export interface PublicAchievementFull extends PublicSummaryFull {
   publishedAt: string | null;
   availableFrom: string | null;
   availableUntil: string | null;
+  /** Gehört diesem POI (Geschäft, Filiale) */
+  poi: { id: string; name: string; address: string | null; lat: number; lng: number } | null;
 }
 export type PublicAchievement = PublicAchievementFull | SecretRef;
 

@@ -6,6 +6,7 @@ import type { AchievementService } from './achievements.ts';
 import { audit } from './audit.ts';
 import { checkoutUrl, eventUrl } from './signing.ts';
 import { scheduleError, type Schedule } from './schedule.ts';
+import type { PoiService } from './pois.ts';
 import { randomSecret, randomToken } from './tokens.ts';
 
 export interface CodeInput {
@@ -23,6 +24,8 @@ export interface CodeInput {
   placeName?: string | null;
   /** Feste Zeiten (Wochentage + Uhrzeit); null = immer */
   schedule?: Schedule | null;
+  /** Optional: Code oder Ort hängt an diesem POI. Bei Orten ohne Angaben kommen Standort (Radius 60 m) und Name vom POI. */
+  poiId?: string | null;
   /** Nur für Gutschein-Stapel: Anzahl einmaliger Codes */
   count?: number;
 }
@@ -56,6 +59,7 @@ export interface CodeView {
   geo: { lat: number; lng: number; radiusM: number } | null;
   placeName: string | null;
   schedule: Schedule | null;
+  poiId: string | null;
   batchId: string | null;
   createdAt: string;
 }
@@ -77,6 +81,9 @@ const TEMPLATES: Record<CodeTemplate, { defaults: Partial<CodeInput>; fixed: Par
   place: { defaults: { perUserLimit: 1 }, fixed: { value: 1 }, dynamic: false, link: false },
 };
 
+/** Ort am POI ohne eigene Angabe: typisches Geschäft samt Gehweg */
+export const POI_DEFAULT_RADIUS_M = 60;
+
 /** Ort: Radius passend zur GPS-Genauigkeit von Handys */
 export const PLACE_RADIUS = { min: 30, max: 2000 } as const;
 
@@ -97,6 +104,7 @@ export class CodeService {
     private achievements: AchievementService,
     private publicBaseUrl: string,
     private now: () => number = Date.now,
+    private pois?: PoiService,
   ) {}
 
   toView(c: Code): CodeView {
@@ -117,6 +125,7 @@ export class CodeService {
       geo: c.geo_lat !== null && c.geo_lng !== null && c.geo_radius_m !== null ? { lat: c.geo_lat, lng: c.geo_lng, radiusM: c.geo_radius_m } : null,
       placeName: c.place_name,
       schedule: c.schedule,
+      poiId: c.poi_id,
       batchId: c.batch_id,
       createdAt: c.created_at.toISOString(),
     };
@@ -138,6 +147,15 @@ export class CodeService {
     }
     const batchId = input.template === 'voucher' && count > 1 ? randomUUID() : null;
     if (merged.schedule) checkSchedule(merged.schedule);
+    if (merged.poiId) {
+      if (!this.pois) throw invalid('POI sind nicht verfügbar');
+      const poi = await this.pois.requireOwned(orgId, merged.poiId);
+      // Ort am POI: Standort und Name vom POI, wenn nichts anderes angegeben ist
+      if (input.template === 'place') {
+        merged.geo ??= { lat: poi.lat, lng: poi.lng, radiusM: POI_DEFAULT_RADIUS_M };
+        if (!merged.placeName?.trim()) merged.placeName = poi.name.slice(0, 80);
+      }
+    }
     if (input.template === 'place') {
       if (!merged.geo) throw invalid('Ein Ort braucht einen Standort');
       checkPlaceRadius(merged.geo.radiusM);
@@ -165,6 +183,7 @@ export class CodeService {
         geo_radius_m: merged.geo?.radiusM ?? null,
         place_name: input.template === 'place' ? merged.placeName!.trim() : null,
         schedule: merged.schedule?.length ? JSON.stringify(merged.schedule) : null,
+        poi_id: merged.poiId ?? null,
         batch_id: batchId,
         created_by: actor,
       }))).returningAll().execute();

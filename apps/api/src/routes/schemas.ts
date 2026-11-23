@@ -19,6 +19,14 @@ export const TierInputSchema = z.object({
   awardedText: text(500).nullish(),
 });
 
+export const PoiRefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  address: z.string().nullable(),
+  lat: z.number(),
+  lng: z.number(),
+}).openapi('PoiRef', { description: 'POI aus dem HSP (Geschäft, Filiale, Ort einer Organisation)' });
+
 export const AutoRuleSchema = z.enum(['active_days', 'awards_count', 'orgs_count', 'places_count', 'collections_count']).openapi('AutoRule', {
   description: 'active_days: Tage mit geöffneter App · awards_count: gesammelte Abzeichen · orgs_count: verschiedene Organisationen · places_count: besuchte Orte · collections_count: geschaffte Kombinationen',
 });
@@ -38,6 +46,7 @@ export const AchievementInputSchema = z.object({
   items: z.array(z.string().uuid()).max(20).optional().openapi({ description: 'Nur Kombination: Teil-Abzeichen (2–20)' }),
   availableFrom: z.string().datetime({ offset: true }).nullish().openapi({ description: 'Zeitfenster: erst ab dann zu verdienen' }),
   availableUntil: z.string().datetime({ offset: true }).nullish().openapi({ description: 'Zeitfenster: nur bis dann zu verdienen (Limited Edition)' }),
+  poiId: z.string().min(1).max(100).nullish().openapi({ description: 'Gehört diesem POI der Organisation; leer = der ganzen Organisation' }),
   autoRule: AutoRuleSchema.nullish().openapi({ description: 'Plattform-Abzeichen (nur Haupt-Admin-Organisation): automatische Vergabe. Fortschritt = Wert der Kennzahl.' }),
 }).openapi('AchievementInput');
 
@@ -67,6 +76,7 @@ export const AchievementSchema = z.object({
   autoRule: AutoRuleSchema.nullable(),
   availableFrom: z.string().nullable(),
   availableUntil: z.string().nullable(),
+  poi: PoiRefSchema.nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
   publishedAt: z.string().nullable(),
@@ -104,6 +114,7 @@ export const PublicAchievementFullSchema = PublicSummaryFullSchema.extend({
   publishedAt: z.string().nullable(),
   availableFrom: z.string().nullable().openapi({ description: 'Zeitfenster: erst ab dann zu verdienen' }),
   availableUntil: z.string().nullable().openapi({ description: 'Zeitfenster: nur bis dann zu verdienen' }),
+  poi: PoiRefSchema.nullable().openapi({ description: 'Gehört diesem POI (Geschäft, Filiale); null = der ganzen Organisation' }),
 }).openapi('PublicAchievementDetails');
 
 export const PublicAchievementSchema = z.union([PublicAchievementFullSchema, SecretRefSchema]).openapi('PublicAchievement');
@@ -159,6 +170,7 @@ export const CodeInputSchema = z.object({
   geo: GeoSchema.nullish(),
   placeName: text(80).nullish().openapi({ description: 'Nur Vorlage place: öffentlicher Name des Ortes auf der Karte' }),
   schedule: ScheduleSchema.nullish(),
+  poiId: z.string().min(1).max(100).nullish().openapi({ description: 'Hängt an diesem POI; Orte übernehmen Standort und Namen, wenn nicht angegeben' }),
   count: z.number().int().min(1).max(500).optional(),
 }).openapi('CodeInput');
 
@@ -189,6 +201,7 @@ export const CodeSchema = z.object({
   geo: GeoSchema.nullable(),
   placeName: z.string().nullable(),
   schedule: ScheduleSchema.nullable(),
+  poiId: z.string().nullable(),
   batchId: z.string().uuid().nullable(),
   createdAt: z.string(),
 }).openapi('Code');

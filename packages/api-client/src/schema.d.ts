@@ -2699,6 +2699,129 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orgs/{orgId}/pois": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** POI der Organisation aus dem HSP (frisch abgerufen; fällt das HSP aus, der letzte Stand) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    orgId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description POI */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["Poi"][];
+                        };
+                    };
+                };
+                /** @description Nicht angemeldet */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Keine Berechtigung */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht gefunden */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Konflikt mit dem aktuellen Zustand */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Ungültige Eingabe */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pois": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** POI mit gerade verfügbaren Abzeichen (für die Karte) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description POI */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["PublicPoi"][];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orgs/{orgId}/api-keys": {
         parameters: {
             query?: never;
@@ -3284,6 +3407,7 @@ export interface components {
             autoRule: components["schemas"]["AutoRule"];
             availableFrom: string | null;
             availableUntil: string | null;
+            poi: components["schemas"]["PoiRef"];
             createdAt: string;
             updatedAt: string;
             publishedAt: string | null;
@@ -3293,6 +3417,14 @@ export interface components {
          * @enum {string|null}
          */
         AutoRule: "active_days" | "awards_count" | "orgs_count" | "places_count" | "collections_count" | null;
+        /** @description POI aus dem HSP (Geschäft, Filiale, Ort einer Organisation) */
+        PoiRef: {
+            id: string;
+            name: string;
+            address: string | null;
+            lat: number;
+            lng: number;
+        } | null;
         AchievementInput: {
             /** @enum {string} */
             kind: "single" | "tiered" | "collection";
@@ -3353,6 +3485,8 @@ export interface components {
              * @description Zeitfenster: nur bis dann zu verdienen (Limited Edition)
              */
             availableUntil?: string | null;
+            /** @description Gehört diesem POI der Organisation; leer = der ganzen Organisation */
+            poiId?: string | null;
             /**
              * @description Plattform-Abzeichen (nur Haupt-Admin-Organisation): automatische Vergabe. Fortschritt = Wert der Kennzahl.
              * @enum {string|null}
@@ -3419,6 +3553,8 @@ export interface components {
              * @description Zeitfenster: nur bis dann zu verdienen (Limited Edition)
              */
             availableUntil?: string | null;
+            /** @description Gehört diesem POI der Organisation; leer = der ganzen Organisation */
+            poiId?: string | null;
             /**
              * @description Plattform-Abzeichen (nur Haupt-Admin-Organisation): automatische Vergabe. Fortschritt = Wert der Kennzahl.
              * @enum {string|null}
@@ -3449,6 +3585,7 @@ export interface components {
             } | null;
             placeName: string | null;
             schedule: components["schemas"]["Schedule"];
+            poiId: string | null;
             /** Format: uuid */
             batchId: string | null;
             createdAt: string;
@@ -3483,6 +3620,8 @@ export interface components {
             /** @description Nur Vorlage place: öffentlicher Name des Ortes auf der Karte */
             placeName?: string | null;
             schedule?: components["schemas"]["Schedule"];
+            /** @description Hängt an diesem POI; Orte übernehmen Standort und Namen, wenn nicht angegeben */
+            poiId?: string | null;
             count?: number;
         };
         CodePatch: {
@@ -3519,6 +3658,7 @@ export interface components {
             availableFrom: string | null;
             /** @description Zeitfenster: nur bis dann zu verdienen */
             availableUntil: string | null;
+            poi: components["schemas"]["PoiRef"] & unknown;
         };
         AchievementRef: components["schemas"]["AchievementSummary"] | components["schemas"]["SecretAchievement"];
         AchievementSummary: {
@@ -3887,6 +4027,8 @@ export interface components {
             scheduleText: string | null;
             /** @description Gerade innerhalb der festen Zeiten */
             openNow: boolean;
+            /** @description Ort hängt an diesem POI (siehe /api/v1/pois) */
+            poiId: string | null;
             achievement: components["schemas"]["AchievementRef"];
             /** @description Mit Anmeldung: hier vorerst nicht mehr möglich (Limit oder Wartezeit). Ohne Anmeldung null. */
             done: boolean | null;
@@ -3900,6 +4042,19 @@ export interface components {
                 /** @description Gerät meldet vorgetäuschten Standort (Android) */
                 mocked?: boolean;
             };
+        };
+        /** @description POI aus dem HSP (Geschäft, Filiale, Ort einer Organisation) */
+        Poi: components["schemas"]["PoiRef"] & {
+            category: string | null;
+            openingHours: components["schemas"]["Schedule"] & unknown;
+            openingHoursText: string | null;
+            removed: boolean;
+        };
+        /** @description POI aus dem HSP (Geschäft, Filiale, Ort einer Organisation) */
+        PublicPoi: components["schemas"]["PoiRef"] & {
+            category: string | null;
+            openingHoursText: string | null;
+            achievements: components["schemas"]["AchievementRef"][];
         };
         ApiKey: {
             /** Format: uuid */

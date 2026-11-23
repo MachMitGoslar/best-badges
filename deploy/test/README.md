@@ -34,6 +34,17 @@ Eingerichtet am 16.11.2026. Speicherbedarf im Betrieb: etwa 80 MB für alle drei
 2. In `/srv/stacks/badges/hsp.json` unter `users` einen Eintrag mit dem Benutzernamen und den Organisationen ergänzen.
 3. `docker compose restart mock-hsp` ausführen.
 
+## Testdaten
+
+`scripts/testdaten/seed.sh` füllt die Testumgebung mit erfundenen Daten. Das Skript kann gefahrlos mehrfach laufen; vorher sichert es `hsp.json` und die Datenbank (`*.pre-seed-<Zeit>`).
+
+- **Organisationen:** 6 erfundene Organisationen, alle mit „(Test)“ markiert: Café, Bäckerei, Fitnessstudio, Bühne, Sportverein, Weihnachtsmarkt. Dazu 8 POI in Goslar mit Öffnungszeiten.
+- **Abzeichen:** 32 Stück in allen Varianten. Dabei sind Stufen, Kombinationen, versteckte Abzeichen, Orte mit festen Zeiten, Limited Editions (vorbei, laufend, kommend), POI-Abzeichen, Plattform-Abzeichen und Adventssonntage als Kombination.
+- **Sammler:** 40 erfundene Sammler (`seed-sammler-01` … `40`) mit Vergaben. Die Hälfte hat ein öffentliches Profil (`test-anna`, `test-carla` …). Anmelden kann man sich mit ihnen nicht.
+- **Konten für Organisationen:** Im Test-HSP eingetragen sind `bb-cafe`, `bb-baeckerei`, `bb-fitness`, `bb-buehne`, `bb-verein`, `bb-weihnachtsmarkt`, `bb-museum` (Museum und Bibliothek), `bb-wald` und `bb-buerger` (ohne Organisation). Damit man sich mit ihnen anmelden kann, legt stuff sie in authentik an und nimmt sie in die Gruppe `badges-testers` auf (siehe „Testperson hinzufügen“).
+
+Seed-Daten tragen `created_by = 'seed'` bzw. Nutzer `seed-…`. Echte Daten bleiben unberührt, außer Vergaben an Seed-Abzeichen: Die werden bei jedem Lauf neu angelegt.
+
 ## App gegen die Testumgebung
 
 Release-Builds nutzen `apps/app/.env.production` und sprechen damit mit der Testumgebung. Die Datei liegt im Repository, weil sie keine Geheimnisse enthält: Die App ist ein öffentlicher Client mit PKCE. Die lokale Entwicklung (Debug) nutzt weiter `apps/app/.env`.

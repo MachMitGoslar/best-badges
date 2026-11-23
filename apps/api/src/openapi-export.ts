@@ -10,7 +10,7 @@ const config = {
   PUBLIC_BASE_URL: 'https://badges.invalid', MIGRATE_ON_START: false, CORS_ORIGINS: [], HSP_MEMBERSHIP_TTL: 1, HSP_ORG_TTL: 1, PLACE_ALLOW_MOCKED: false,
 };
 const db = createDb(config.DATABASE_URL, { max: 1 }); // verbindet sich erst bei der ersten Abfrage – hier nie
-const app = createApp({ config, db, directory: { lookupUser: async () => { throw new Error(); }, getOrganisation: async () => null } });
+const app = createApp({ config, db, directory: { lookupUser: async () => { throw new Error(); }, getOrganisation: async () => null, listPointsOfInterest: async () => [] } });
 const doc = app.getOpenAPI31Document({
   openapi: '3.1.0',
   info: { title: 'Best Badges API', version: '0.1.0' },

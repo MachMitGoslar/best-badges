@@ -688,6 +688,9 @@
               "null"
             ]
           },
+          "poi": {
+            "$ref": "#/components/schemas/PoiRef"
+          },
           "createdAt": {
             "type": "string"
           },
@@ -722,6 +725,7 @@
           "autoRule",
           "availableFrom",
           "availableUntil",
+          "poi",
           "createdAt",
           "updatedAt",
           "publishedAt"
@@ -742,6 +746,40 @@
           null
         ],
         "description": "active_days: Tage mit geöffneter App · awards_count: gesammelte Abzeichen · orgs_count: verschiedene Organisationen · places_count: besuchte Orte · collections_count: geschaffte Kombinationen"
+      },
+      "PoiRef": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "address",
+          "lat",
+          "lng"
+        ],
+        "description": "POI aus dem HSP (Geschäft, Filiale, Ort einer Organisation)"
       },
       "AchievementInput": {
         "type": "object",
@@ -1052,6 +1090,15 @@
             ],
             "format": "date-time",
             "description": "Zeitfenster: nur bis dann zu verdienen (Limited Edition)"
+          },
+          "poiId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Gehört diesem POI der Organisation; leer = der ganzen Organisation"
           },
           "autoRule": {
             "type": [
@@ -1385,6 +1432,15 @@
             "format": "date-time",
             "description": "Zeitfenster: nur bis dann zu verdienen (Limited Edition)"
           },
+          "poiId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Gehört diesem POI der Organisation; leer = der ganzen Organisation"
+          },
           "autoRule": {
             "type": [
               "string",
@@ -1508,6 +1564,12 @@
           "schedule": {
             "$ref": "#/components/schemas/Schedule"
           },
+          "poiId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "batchId": {
             "type": [
               "string",
@@ -1536,6 +1598,7 @@
           "geo",
           "placeName",
           "schedule",
+          "poiId",
           "batchId",
           "createdAt"
         ]
@@ -1680,6 +1743,15 @@
           },
           "schedule": {
             "$ref": "#/components/schemas/Schedule"
+          },
+          "poiId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Hängt an diesem POI; Orte übernehmen Standort und Namen, wenn nicht angegeben"
           },
           "count": {
             "type": "integer",
@@ -1838,6 +1910,16 @@
                   "null"
                 ],
                 "description": "Zeitfenster: nur bis dann zu verdienen"
+              },
+              "poi": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/PoiRef"
+                  },
+                  {
+                    "description": "Gehört diesem POI (Geschäft, Filiale); null = der ganzen Organisation"
+                  }
+                ]
               }
             },
             "required": [
@@ -1848,7 +1930,8 @@
               "items",
               "publishedAt",
               "availableFrom",
-              "availableUntil"
+              "availableUntil",
+              "poi"
             ]
           }
         ]
@@ -3644,6 +3727,13 @@
             "type": "boolean",
             "description": "Gerade innerhalb der festen Zeiten"
           },
+          "poiId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Ort hängt an diesem POI (siehe /api/v1/pois)"
+          },
           "achievement": {
             "$ref": "#/components/schemas/AchievementRef"
           },
@@ -3666,6 +3756,7 @@
           "schedule",
           "scheduleText",
           "openNow",
+          "poiId",
           "achievement",
           "done"
         ]
@@ -3707,6 +3798,86 @@
         "required": [
           "geo"
         ]
+      },
+      "Poi": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PoiRef"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "openingHours": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Schedule"
+                  },
+                  {
+                    "description": "Öffnungszeiten aus dem HSP im Format der festen Zeiten"
+                  }
+                ]
+              },
+              "openingHoursText": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "removed": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "category",
+              "openingHours",
+              "openingHoursText",
+              "removed"
+            ]
+          }
+        ],
+        "description": "POI aus dem HSP (Geschäft, Filiale, Ort einer Organisation)"
+      },
+      "PublicPoi": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PoiRef"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "openingHoursText": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "achievements": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AchievementRef"
+                }
+              }
+            },
+            "required": [
+              "category",
+              "openingHoursText",
+              "achievements"
+            ]
+          }
+        ],
+        "description": "POI aus dem HSP (Geschäft, Filiale, Ort einer Organisation)"
       },
       "ApiKey": {
         "type": "object",
@@ -7045,6 +7216,134 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/orgs/{orgId}/pois": {
+      "get": {
+        "tags": [
+          "Codes"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "POI der Organisation aus dem HSP (frisch abgerufen; fällt das HSP aus, der letzte Stand)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "POI",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Poi"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Keine Berechtigung",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflikt mit dem aktuellen Zustand",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ungültige Eingabe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pois": {
+      "get": {
+        "tags": [
+          "Orte"
+        ],
+        "summary": "POI mit gerade verfügbaren Abzeichen (für die Karte)",
+        "responses": {
+          "200": {
+            "description": "POI",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PublicPoi"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
                 }
               }
             }
