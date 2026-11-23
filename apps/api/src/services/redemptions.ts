@@ -346,12 +346,15 @@ export class RedemptionService {
     if (list.length === 0) return [];
     const current = new Map((await trx.selectFrom('awards').select(['achievement_id', 'progress'])
       .where('user_sub', '=', userSub).where('achievement_id', 'in', list.map((a) => a.id)).execute()).map((a) => [a.achievement_id, a.progress]));
-    const values = new Map<AutoRule, number>();
+    const values = new Map<string, number>();
     const out: BonusUnlock[] = [];
     for (const a of list) {
       const rule = a.auto_rule!;
-      if (!values.has(rule)) values.set(rule, await metric(trx, userSub, rule));
-      const v = values.get(rule)!;
+      // „Nur im Zeitraum“: eigene Kennzahl je Zeitraum, sonst eine je Regel
+      const window = a.count_window ? { from: a.available_from, until: a.available_until } : null;
+      const key = window ? `${rule}:${window.from?.getTime() ?? ''}:${window.until?.getTime() ?? ''}` : rule;
+      if (!values.has(key)) values.set(key, await metric(trx, userSub, rule, window));
+      const v = values.get(key)!;
       if (v <= (current.get(a.id) ?? 0)) continue;
       const r = await this.applyProgress(trx, a, userSub, v, push, true);
       if (r.firstTime || r.tierUp) {

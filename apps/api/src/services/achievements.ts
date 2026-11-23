@@ -35,6 +35,8 @@ export interface AchievementInput {
   availableUntil?: string | null;
   /** Optional: gehört diesem POI der Organisation (sonst der ganzen Organisation) */
   poiId?: string | null;
+  /** Plattform-Abzeichen mit Zeitraum: nur zählen, was im Zeitraum passiert ist */
+  countWindow?: boolean;
 }
 
 export type ItemState = 'approved' | 'pending' | 'rejected';
@@ -78,12 +80,20 @@ export interface AchievementView {
   availableUntil: string | null;
   /** Gehört diesem POI (Name, Adresse, Koordinaten) – sonst der ganzen Organisation */
   poi: PoiRef | null;
+  countWindow: boolean;
   createdAt: string;
   updatedAt: string;
   publishedAt: string | null;
 }
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
+
+/** „Nur im Zeitraum zählen“ gibt es nur bei Plattform-Abzeichen mit Zeitraum. */
+function checkCountWindow(countWindow: boolean, rule: AutoRule | null, from: string | null, until: string | null) {
+  if (!countWindow) return;
+  if (!rule) throw invalid('„Nur im Zeitraum zählen“ gibt es nur bei Plattform-Abzeichen');
+  if (!from && !until) throw invalid('„Nur im Zeitraum zählen“ braucht „Verfügbar ab“ oder „Verfügbar bis“');
+}
 
 function checkWindow(from: string | null, until: string | null) {
   if (from && until && new Date(from) >= new Date(until)) throw invalid('„Verfügbar bis“ muss nach „Verfügbar ab“ liegen');
@@ -124,6 +134,7 @@ export function toView(a: Achievement, tiers: Tier[], items: ItemRow[] = [], poi
     availableFrom: iso(a.available_from),
     availableUntil: iso(a.available_until),
     poi: a.poi_id && pois.get(a.poi_id) ? poiRef(pois.get(a.poi_id)!) : null,
+    countWindow: a.count_window,
     createdAt: a.created_at.toISOString(),
     updatedAt: a.updated_at.toISOString(),
     publishedAt: iso(a.published_at),
@@ -320,6 +331,7 @@ export class AchievementService {
     const tiers = normalizeTiers(input.kind, input.tiers, input.requiredCount);
     this.checkAutoRule(orgId, input.kind, input.autoRule);
     checkWindow(input.availableFrom ?? null, input.availableUntil ?? null);
+    checkCountWindow(input.countWindow ?? false, input.autoRule ?? null, input.availableFrom ?? null, input.availableUntil ?? null);
     await this.checkPoi(orgId, input.poiId);
     const row = await this.db.transaction().execute(async (trx) => {
       if (isCollection) await this.checkItems(trx, orgId, null, input.items, input.requiredCount);
@@ -339,6 +351,7 @@ export class AchievementService {
         available_from: input.availableFrom ?? null,
         available_until: input.availableUntil ?? null,
         poi_id: input.poiId ?? null,
+        count_window: input.countWindow ?? false,
         vetoed_at: null, vetoed_by: null, veto_reason: null, published_at: null,
         created_by: actor,
       }).returningAll().executeTakeFirstOrThrow();
@@ -354,12 +367,17 @@ export class AchievementService {
     const current = await this.load(orgId, id);
     if (current.status === 'archived') throw conflict('archived', 'Archivierte Abzeichen lassen sich nicht ändern');
     const structural = patch.kind !== undefined || patch.tiers !== undefined || patch.items !== undefined || patch.requiredCount !== undefined;
-    if ((structural || patch.autoRule !== undefined) && current.status !== 'draft') {
+    if ((structural || patch.autoRule !== undefined || (patch.countWindow !== undefined && patch.countWindow !== current.count_window)) && current.status !== 'draft') {
       throw conflict('not_draft', 'Art, Stufen, Teile und Regel lassen sich nur im Entwurf ändern');
     }
     const nextRule = patch.autoRule !== undefined ? patch.autoRule : current.auto_rule;
     this.checkAutoRule(orgId, patch.kind ?? current.kind, nextRule);
     checkWindow(
+      patch.availableFrom !== undefined ? patch.availableFrom : iso(current.available_from),
+      patch.availableUntil !== undefined ? patch.availableUntil : iso(current.available_until),
+    );
+    checkCountWindow(
+      patch.countWindow ?? current.count_window, nextRule,
       patch.availableFrom !== undefined ? patch.availableFrom : iso(current.available_from),
       patch.availableUntil !== undefined ? patch.availableUntil : iso(current.available_until),
     );
@@ -379,6 +397,7 @@ export class AchievementService {
       if (patch.availableFrom !== undefined) values.available_from = patch.availableFrom;
       if (patch.availableUntil !== undefined) values.available_until = patch.availableUntil;
       if (patch.poiId !== undefined) values.poi_id = patch.poiId;
+      if (patch.countWindow !== undefined) values.count_window = patch.countWindow;
       if (patch.spec !== undefined) values.spec = JSON.stringify(BadgeSpecSchema.parse(patch.spec));
       if (structural) {
         const kind = patch.kind ?? current.kind;

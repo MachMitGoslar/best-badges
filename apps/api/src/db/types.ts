@@ -26,6 +26,8 @@ export interface AchievementsTable {
   available_until: ColumnType<Date | null, Date | string | null | undefined, Date | string | null>;
   /** Optional: gehört diesem POI der Organisation */
   poi_id: Generated<string | null>;
+  /** Plattform-Abzeichen mit Zeitraum: nur zählen, was im Zeitraum passiert ist */
+  count_window: Generated<boolean>;
   vetoed_at: NullableTimestamp;
   vetoed_by: string | null;
   veto_reason: string | null;
